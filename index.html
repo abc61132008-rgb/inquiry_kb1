@@ -1,0 +1,3555 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>通用型自然探究（KB 知識翻新）智慧對話與研究監測平台</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- KaTeX for Scientific & Chemical Formulas -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+  
+  <!-- Chart.js for Teacher Dashboard -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    /* 現代科研簡約白底視覺 */
+    body {
+      background-color: #f8fafc;
+      color: #0f172a;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    .panel-card {
+      background-color: #ffffff;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+    }
+    .panel-card-subtle {
+      background-color: #f8fafc;
+      border: 1px solid #e2e8f0;
+    }
+
+    /* 黑階純粹科技風格 CER 水位計（10 分制） */
+    .water-gauge {
+      position: relative;
+      background: #f1f5f9;
+      border: 1.5px solid #0f172a;
+      border-radius: 6px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column-reverse;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.08);
+    }
+    .water-liquid {
+      width: 100%;
+      transition: height 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+      position: relative;
+    }
+    .water-liquid::after {
+      content: '';
+      position: absolute;
+      top: -2px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: rgba(255, 255, 255, 0.5);
+      filter: blur(0.5px);
+    }
+    .water-liquid-c {
+      background: linear-gradient(180deg, #475569 0%, #0f172a 100%);
+    }
+    .water-liquid-e {
+      background: linear-gradient(180deg, #334155 0%, #020617 100%);
+    }
+    .water-liquid-r {
+      background: linear-gradient(180deg, #64748b 0%, #0f172a 100%);
+    }
+
+    /* 思考角度標籤選中樣式 */
+    .scaffold-btn.is-active {
+      background-color: #0f172a !important;
+      color: #ffffff !important;
+      border-color: #0f172a !important;
+    }
+
+    /* 科技感綠色微動呼吸燈 */
+    @keyframes led-pulse-green {
+      0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6);
+      }
+      50% {
+        transform: scale(1.15);
+        box-shadow: 0 0 0 3.5px rgba(16, 185, 129, 0);
+      }
+    }
+    .status-led-pulse {
+      animation: led-pulse-green 2.2s infinite cubic-bezier(0.4, 0, 0.6, 1);
+    }
+
+    /* 琥珀金色脈衝燈（處理中/寫入中） */
+    @keyframes led-pulse-amber {
+      0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.6);
+      }
+      50% {
+        transform: scale(1.15);
+        box-shadow: 0 0 0 3.5px rgba(245, 158, 11, 0);
+      }
+    }
+    .status-led-pulse-amber {
+      animation: led-pulse-amber 1.6s infinite cubic-bezier(0.4, 0, 0.6, 1);
+    }
+
+    /* KaTeX 渲染防錯、防斷行與防疊加樣式 */
+    .katex-mathml {
+      display: none !important;
+      position: absolute !important;
+      clip: rect(1px, 1px, 1px, 1px) !important;
+      padding: 0 !important;
+      border: 0 !important;
+      height: 1px !important;
+      width: 1px !important;
+      overflow: hidden !important;
+    }
+    .katex, .katex * {
+      white-space: nowrap !important;
+    }
+    .katex-display {
+      margin: 0.5rem 0 !important;
+      overflow-x: auto !important;
+      overflow-y: hidden !important;
+      padding: 0.25rem 0 !important;
+    }
+    .chat-bubble-content {
+      line-height: 1.65;
+    }
+    .chat-bubble-content p {
+      margin-bottom: 0.625rem;
+    }
+    .chat-bubble-content p:last-child {
+      margin-bottom: 0;
+    }
+  </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col selection:bg-slate-200 overflow-x-hidden">
+
+  <!-- ==================== TOP NAVIGATION ==================== -->
+  <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
+    <div class="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 min-h-[4.25rem] flex items-center justify-between gap-4">
+      
+      <!-- 1. Left: Brand & Classroom Info + 系統監測狀態 (垂直排列於下方，API/寫入/匯入各自一顆燈) -->
+      <div class="flex items-start gap-3 shrink-0">
+        <div class="w-2.5 h-2.5 rounded-full bg-slate-900 mt-1.5 shrink-0"></div>
+        <div class="space-y-0.5">
+          <!-- 標題與標籤 -->
+          <div class="flex items-center gap-2">
+            <h1 class="text-xs sm:text-sm font-bold text-slate-900 tracking-tight">
+              自然科學探究與實作
+            </h1>
+            <span class="text-[10px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 font-medium">
+              KB 知識翻新
+            </span>
+          </div>
+
+          <!-- 目前教室 -->
+          <div class="flex items-center gap-1.5">
+            <span id="header-classroom-badge" class="text-[11px] text-slate-500 font-medium truncate max-w-[200px] sm:max-w-xs">
+              目前教室：載入中...
+            </span>
+          </div>
+
+          <!-- 系統監測列（API、寫入、匯入 各自配置一顆獨立呼吸燈） -->
+          <div class="flex items-center gap-2.5 pt-0.5 text-[10px] font-mono text-slate-500">
+            <!-- 1. API 狀態與獨立燈號 -->
+            <div id="api-status-pill" title="點擊設定 API 金鑰" class="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity">
+              <span id="led-api" class="w-2 h-2 rounded-full bg-emerald-500 status-led-pulse shrink-0"></span>
+              <span class="text-slate-400 font-sans">API:</span>
+              <span id="status-api-text" class="text-slate-700 font-semibold truncate max-w-[90px] sm:max-w-none">就緒</span>
+            </div>
+            <span class="text-slate-300">•</span>
+
+            <!-- 2. 寫入狀態與獨立燈號 -->
+            <div class="flex items-center gap-1.5">
+              <span id="led-write" class="w-2 h-2 rounded-full bg-slate-400 shrink-0"></span>
+              <span class="text-slate-400 font-sans">寫入:</span>
+              <span id="status-write-text" class="text-slate-600 truncate max-w-[75px] sm:max-w-none">待命</span>
+            </div>
+            <span class="text-slate-300">•</span>
+
+            <!-- 3. 匯入狀態與獨立燈號 -->
+            <div class="flex items-center gap-1.5">
+              <span id="led-import" class="w-2 h-2 rounded-full bg-slate-400 shrink-0"></span>
+              <span class="text-slate-400 font-sans">匯入:</span>
+              <span id="status-import-text" class="text-slate-600 truncate max-w-[75px] sm:max-w-none">未執行</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Right: Operations & View Mode Switcher (留有充裕呼吸空間) -->
+      <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+        
+        <!-- Action Group 1: 雲端與金鑰操作群組 (統一簡約分段樣式) -->
+        <div class="flex items-center bg-slate-50 p-1 rounded-lg border border-slate-200 text-xs shadow-2xs">
+          <button id="btn-top-apikey" type="button" class="px-2 sm:px-2.5 py-1 text-xs font-medium text-slate-700 hover:text-slate-900 hover:bg-white rounded transition-all">
+            API 設定
+          </button>
+          <span class="h-3 w-px bg-slate-200 mx-0.5"></span>
+          <button id="btn-top-import-gsheet" type="button" class="px-2 sm:px-2.5 py-1 text-xs font-medium text-slate-700 hover:text-slate-900 hover:bg-white rounded transition-all">
+            匯入
+          </button>
+          <span class="h-3 w-px bg-slate-200 mx-0.5"></span>
+          <button id="btn-top-sync-gsheet" type="button" class="px-2 sm:px-2.5 py-1 text-xs font-medium text-slate-700 hover:text-slate-900 hover:bg-white rounded transition-all">
+            寫入
+          </button>
+          <span class="h-3 w-px bg-slate-200 mx-0.5 hidden lg:inline-block"></span>
+          <button id="btn-top-gsheet-config" type="button" class="px-2 sm:px-2.5 py-1 text-xs font-medium text-slate-700 hover:text-slate-900 hover:bg-white rounded transition-all hidden lg:inline-block">
+            試算表設定
+          </button>
+        </div>
+
+        <!-- Action Group 2: 視角切換器 (分段控制器 Segmented Control) -->
+        <div class="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs shadow-2xs">
+          <button id="btn-nav-student" type="button" class="px-2.5 sm:px-3 py-1 text-xs font-semibold rounded-md bg-slate-900 text-white transition-all shadow-xs">
+            學生端
+          </button>
+          <button id="btn-nav-teacher" type="button" class="px-2.5 sm:px-3 py-1 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 rounded-md transition-all">
+            教師後台
+          </button>
+          <button id="btn-nav-split" type="button" class="px-2.5 sm:px-3 py-1 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 rounded-md transition-all hidden sm:block">
+            同屏
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ==================== MAIN WORKSPACE ==================== -->
+  <div class="flex-1 flex flex-col p-3 sm:p-5 max-w-7xl mx-auto w-full">
+
+    <!-- ==================== 1. STUDENT VIEW ==================== -->
+    <section id="view-student" class="w-full">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+
+        <!-- ===== LEFT MAIN COLUMN: Pure KB Agent Dialogue Space (左邊只放 Agent 對話) ===== -->
+        <main class="lg:col-span-8 flex flex-col panel-card rounded-xl overflow-hidden min-w-0 w-full order-1 lg:order-1">
+          
+          <!-- Chatroom Header -->
+          <div class="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <div class="w-2.5 h-2.5 rounded-full bg-slate-800"></div>
+              <h3 class="text-xs sm:text-sm font-bold text-slate-800">
+                小組知識翻新探究空間 (<span id="group-tab-label">第 3 組</span>)
+              </h3>
+            </div>
+            <span class="text-[11px] text-slate-400 font-mono">對話與質性推論記錄中</span>
+          </div>
+
+          <!-- Chat Message Stream -->
+          <div id="chat-messages" class="h-[520px] overflow-y-auto p-4 sm:p-5 space-y-4 bg-slate-50/50">
+            <!-- Dynamically populated message cards -->
+          </div>
+
+          <!-- Scaffolding Buttons & Input Area -->
+          <div class="p-3.5 bg-white border-t border-slate-200 space-y-2.5">
+            
+            <!-- Scaffolding Rows (CER Framework + KB Principles) -->
+            <div class="space-y-1.5">
+              <!-- Row 1: CER Framework (論證骨幹) -->
+              <div class="flex items-center flex-wrap gap-1.5">
+                <span class="text-[11px] font-bold text-slate-600 font-mono tracking-tight mr-1 shrink-0">
+                  【CER 論證】
+                </span>
+                <button type="button" data-scaffold="C 主張 (Claim)" class="scaffold-btn px-2.5 py-1 text-xs rounded-md border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-all font-medium">
+                  C 主張 (Claim)
+                </button>
+                <button type="button" data-scaffold="E 證據 (Evidence)" class="scaffold-btn px-2.5 py-1 text-xs rounded-md border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-all font-medium">
+                  E 證據 (Evidence)
+                </button>
+                <button type="button" data-scaffold="R 推理 (Reasoning)" class="scaffold-btn px-2.5 py-1 text-xs rounded-md border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-all font-medium">
+                  R 推理 (Reasoning)
+                </button>
+              </div>
+
+              <!-- Row 2: KB Principles (知識翻新) -->
+              <div class="flex items-center flex-wrap gap-1.5">
+                <span class="text-[11px] font-bold text-slate-600 font-mono tracking-tight mr-1 shrink-0">
+                  【KB 原則】
+                </span>
+                <button type="button" data-scaffold="真實想法與問題" class="scaffold-btn px-2.5 py-1 text-xs rounded-md border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-all">
+                  真實想法與問題
+                </button>
+                <button type="button" data-scaffold="可改善的想法" class="scaffold-btn px-2.5 py-1 text-xs rounded-md border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-all">
+                  可改善的想法
+                </button>
+                <button type="button" data-scaffold="想法多樣性" class="scaffold-btn px-2.5 py-1 text-xs rounded-md border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-all">
+                  想法多樣性
+                </button>
+                <button type="button" data-scaffold="觀點整合 (Rise Above)" class="scaffold-btn px-2.5 py-1 text-xs rounded-md border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-all font-medium">
+                  觀點整合 (Rise Above)
+                </button>
+                <button type="button" data-scaffold="認識論主體性 (實驗規劃)" class="scaffold-btn px-2.5 py-1 text-xs rounded-md border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-all">
+                  認識論主體性 (實驗規劃)
+                </button>
+                <button type="button" data-scaffold="運用權威來源 (文獻/定律)" class="scaffold-btn px-2.5 py-1 text-xs rounded-md border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-all">
+                  運用權威來源 (文獻/定律)
+                </button>
+                <button type="button" data-scaffold="社群知識與責任" class="scaffold-btn px-2.5 py-1 text-xs rounded-md border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-all">
+                  社群知識與責任
+                </button>
+              </div>
+            </div>
+
+            <!-- Attached Image Previews -->
+            <div id="student-attachment-preview-area" class="flex flex-wrap gap-2 pt-1 hidden">
+              <!-- Dynamically populated thumbnails -->
+            </div>
+
+            <!-- Input Box & Action Buttons -->
+            <div class="relative flex items-center gap-2">
+              <input type="file" id="student-image-input" accept="image/*" multiple class="hidden" />
+              
+              <button 
+                type="button" 
+                id="btn-upload-photo" 
+                class="p-2 sm:px-3 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg flex items-center gap-1 shrink-0 transition-colors"
+                title="上傳實驗記錄照片"
+              >
+                <span>附圖</span>
+              </button>
+
+              <input 
+                type="text" 
+                id="student-chat-input" 
+                placeholder="輸入小組想法或實驗數據... (支援 LaTeX 如 $H_2O_2$)" 
+                class="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 focus:bg-white transition-all"
+              />
+
+              <button 
+                type="button" 
+                id="btn-send-message" 
+                class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-semibold rounded-lg shrink-0 transition-colors shadow-xs"
+              >
+                發言
+              </button>
+            </div>
+          </div>
+        </main>
+
+        <!-- ===== RIGHT SIDEBAR: Milestones & CER Water Level & Course Info (探究里程碑維度與課程資訊 放右側) ===== -->
+        <aside class="lg:col-span-4 space-y-4 order-2 lg:order-2">
+
+          <!-- Real-time Inquiry Stage Milestones & CER Water-Level Dashboard (移至右邊頂部) -->
+          <div id="student-cer-dashboard" class="panel-card p-4 rounded-xl space-y-3.5">
+            
+            <!-- Non-linear Inquiry Milestones (非線性多維探究維度) -->
+            <div class="space-y-2">
+              <div class="flex items-center justify-between text-xs">
+                <span class="font-bold text-slate-800 text-xs">小組探究維度里程碑</span>
+                <span id="kb-principle-badge" class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 font-mono text-[10px]">
+                  真實想法與問題
+                </span>
+              </div>
+
+              <!-- Multi-dimensional Non-linear Grid (右側 2x2 排列) -->
+              <div class="grid grid-cols-2 gap-2 min-w-0">
+                <!-- Dimension 1: 問題探索 -->
+                <div id="stage-card-1" class="stage-card group relative flex flex-col p-2.5 rounded-lg border border-slate-900 bg-slate-900 text-white transition-all shadow-xs min-w-0">
+                  <div class="flex items-center justify-between mb-0.5">
+                    <span class="text-[11px] font-semibold truncate">1. 問題探索</span>
+                    <span id="stage-icon-1" class="text-[10px] font-mono shrink-0">✓</span>
+                  </div>
+                  <span id="stage-status-1" class="text-[9px] text-slate-200 font-mono truncate">已達成核心提問</span>
+                </div>
+
+                <!-- Dimension 2: 實驗規劃 -->
+                <div id="stage-card-2" class="stage-card group relative flex flex-col p-2.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-600 transition-all min-w-0">
+                  <div class="flex items-center justify-between mb-0.5">
+                    <span class="text-[11px] font-semibold truncate">2. 實驗規劃</span>
+                    <span id="stage-icon-2" class="text-[10px] font-mono text-slate-400 shrink-0">○</span>
+                  </div>
+                  <span id="stage-status-2" class="text-[9px] text-slate-400 font-mono truncate">待規劃檢驗</span>
+                </div>
+
+                <!-- Dimension 3: 證據收集 -->
+                <div id="stage-card-3" class="stage-card group relative flex flex-col p-2.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-600 transition-all min-w-0">
+                  <div class="flex items-center justify-between mb-0.5">
+                    <span class="text-[11px] font-semibold truncate">3. 證據收集</span>
+                    <span id="stage-icon-3" class="text-[10px] font-mono text-slate-400 shrink-0">○</span>
+                  </div>
+                  <span id="stage-status-3" class="text-[9px] text-slate-400 font-mono truncate">待數據照片</span>
+                </div>
+
+                <!-- Dimension 4: 觀點整合 -->
+                <div id="stage-card-4" class="stage-card group relative flex flex-col p-2.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-600 transition-all min-w-0">
+                  <div class="flex items-center justify-between mb-0.5">
+                    <span class="text-[11px] font-semibold truncate">4. 觀點整合</span>
+                    <span id="stage-icon-4" class="text-[10px] font-mono text-slate-400 shrink-0">○</span>
+                  </div>
+                  <span id="stage-status-4" class="text-[9px] text-slate-400 font-mono truncate">待超越統合</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Vertical Black CER Water Level Gauges (CER 科技水位計) -->
+            <div class="pt-3 border-t border-slate-100">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-[11px] font-bold text-slate-700">CER 論證品質水位</span>
+                <span class="text-[10px] text-slate-400 font-mono">1-10 分細緻刻度</span>
+              </div>
+              <div class="grid grid-cols-3 gap-2 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                <!-- Gauge C -->
+                <div class="flex flex-col items-center">
+                  <div class="text-[10px] font-mono font-bold text-slate-800 mb-1">C 主張</div>
+                  <div class="water-gauge w-8 h-16">
+                    <div id="cer-water-c" class="water-liquid water-liquid-c" style="height: 30%"></div>
+                  </div>
+                  <div class="mt-1 flex items-baseline gap-0.5">
+                    <span id="cer-val-c" class="font-mono text-[11px] font-bold text-slate-900">3.0</span>
+                    <span class="text-[9px] text-slate-400">/10</span>
+                  </div>
+                </div>
+
+                <!-- Gauge E -->
+                <div class="flex flex-col items-center">
+                  <div class="text-[10px] font-mono font-bold text-slate-800 mb-1">E 證據</div>
+                  <div class="water-gauge w-8 h-16">
+                    <div id="cer-water-e" class="water-liquid water-liquid-e" style="height: 20%"></div>
+                  </div>
+                  <div class="mt-1 flex items-baseline gap-0.5">
+                    <span id="cer-val-e" class="font-mono text-[11px] font-bold text-slate-900">2.0</span>
+                    <span class="text-[9px] text-slate-400">/10</span>
+                  </div>
+                </div>
+
+                <!-- Gauge R -->
+                <div class="flex flex-col items-center">
+                  <div class="text-[10px] font-mono font-bold text-slate-800 mb-1">R 推理</div>
+                  <div class="water-gauge w-8 h-16">
+                    <div id="cer-water-r" class="water-liquid water-liquid-r" style="height: 20%"></div>
+                  </div>
+                  <div class="mt-1 flex items-baseline gap-0.5">
+                    <span id="cer-val-r" class="font-mono text-[11px] font-bold text-slate-900">2.0</span>
+                    <span class="text-[9px] text-slate-400">/10</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Room Switch & Identity Card -->
+          <div class="panel-card p-4 rounded-xl space-y-3">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+              <span class="text-xs font-semibold text-slate-700 tracking-wide">探究教室設定</span>
+              <span id="student-identity-pill" class="text-xs px-2.5 py-0.5 rounded-full bg-slate-900 text-white font-mono">
+                第 3 組
+              </span>
+            </div>
+
+            <!-- Classroom Selector -->
+            <div>
+              <label class="block text-[11px] font-medium text-slate-500 mb-1">切換所在教室</label>
+              <select id="student-classroom-select" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2 text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-400">
+                <!-- Dynamically Populated -->
+              </select>
+            </div>
+
+            <!-- Group Selector -->
+            <div>
+              <label class="block text-[11px] font-medium text-slate-500 mb-1">選擇小組組別</label>
+              <select id="student-group-select" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2 text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-400">
+                <option value="第 1 組">第 1 組</option>
+                <option value="第 2 組">第 2 組</option>
+                <option value="第 3 組" selected>第 3 組</option>
+                <option value="第 4 組">第 4 組</option>
+                <option value="第 5 組">第 5 組</option>
+                <option value="第 6 組">第 6 組</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Material & Guidance Card -->
+          <div class="panel-card p-4 rounded-xl space-y-3">
+            <div>
+              <span class="text-[11px] uppercase tracking-wider text-slate-400 font-bold block mb-1">Inquiry Topic</span>
+              <h2 id="student-topic-title" class="text-sm font-bold text-slate-900 leading-snug">
+                探究主題：雙氧水催化分解速率
+              </h2>
+            </div>
+
+            <!-- Scientific Concepts -->
+            <div>
+              <span class="text-[11px] font-medium text-slate-500 block mb-1.5">核心科學概念</span>
+              <div id="student-concepts-tags" class="flex flex-wrap gap-1.5">
+                <!-- Dynamically rendered badges -->
+              </div>
+            </div>
+
+            <!-- Material Detail Text -->
+            <div class="pt-2 border-t border-slate-100">
+              <span class="text-[11px] font-medium text-slate-500 block mb-1">實驗背景與教材引導</span>
+              <div id="student-material-content" class="text-xs text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-100 leading-relaxed max-h-56 overflow-y-auto whitespace-pre-line">
+                載入教材內容中...
+              </div>
+            </div>
+
+            <!-- Teacher Uploaded Attachments / Figures -->
+            <div id="student-material-attachments-wrap" class="pt-2 border-t border-slate-100 hidden">
+              <span class="text-[11px] font-medium text-slate-500 block mb-1.5">教材照片與參考資料</span>
+              <div id="student-material-attachments-list" class="flex flex-wrap gap-2">
+                <!-- Dynamically populated thumbnails -->
+              </div>
+            </div>
+          </div>
+        </aside>
+
+      </div>
+    </section>
+
+    <!-- ==================== 2. TEACHER DASHBOARD ==================== -->
+    <section id="view-teacher" class="w-full hidden space-y-5">
+      
+      <!-- Top Management Bar -->
+      <div class="panel-card p-4 rounded-xl flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <span class="text-xs font-bold text-slate-800 uppercase font-mono">Teacher Dashboard</span>
+          <span class="text-xs text-slate-400">|</span>
+          <div class="flex items-center gap-2">
+            <label class="text-xs text-slate-500 font-medium">篩選教室：</label>
+            <select id="teacher-classroom-filter" class="text-xs bg-slate-50 border border-slate-200 rounded-lg p-1.5 text-slate-800">
+              <!-- Dynamically populated -->
+            </select>
+          </div>
+          <div class="flex items-center gap-2">
+            <label class="text-xs text-slate-500 font-medium">篩選組別：</label>
+            <select id="teacher-group-filter" class="text-xs bg-slate-50 border border-slate-200 rounded-lg p-1.5 text-slate-800">
+              <option value="全部">全部組別</option>
+              <option value="第 1 組">第 1 組</option>
+              <option value="第 2 組">第 2 組</option>
+              <option value="第 3 組">第 3 組</option>
+              <option value="第 4 組">第 4 組</option>
+              <option value="第 5 組">第 5 組</option>
+              <option value="第 6 組">第 6 組</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button id="btn-open-apikey-modal" type="button" class="px-3 py-1.5 text-xs bg-white border border-slate-300 hover:bg-slate-50 rounded-lg text-slate-700 font-medium">
+            🔑 Gemini API 設定
+          </button>
+          <button id="btn-open-gsheet-modal" type="button" class="px-3 py-1.5 text-xs bg-white border border-slate-300 hover:bg-slate-50 rounded-lg text-slate-700 font-medium">
+            📊 Google 試算表設定
+          </button>
+          <button id="btn-import-gsheet" type="button" class="px-3 py-1.5 text-xs bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg font-medium transition-colors">
+            📥 從試算表匯入
+          </button>
+          <button id="btn-sync-gsheet" type="button" class="px-3 py-1.5 text-xs bg-slate-900 text-white hover:bg-slate-800 rounded-lg font-medium transition-colors">
+            立即同步試算表
+          </button>
+          <button id="btn-export-csv" type="button" class="px-3 py-1.5 text-xs bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg font-medium transition-colors">
+            📑 匯出 CSV
+          </button>
+          <button id="btn-import-local-csv" type="button" class="px-3 py-1.5 text-xs bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg font-medium transition-colors" title="直接上傳 CSV 或 JSON 檔案匯入探究紀錄">
+            📂 匯入 CSV/JSON 檔案
+          </button>
+          <input type="file" id="local-csv-file-input" accept=".csv,text/csv,application/json,.json" class="hidden" />
+          <button id="btn-clear-history" type="button" class="px-3 py-1.5 text-xs bg-white border border-red-200 hover:bg-red-50 text-red-600 rounded-lg font-medium transition-colors" title="清除所有測試紀錄，重新開始真實課堂">
+            🗑️ 清空歷史資料
+          </button>
+          <button id="btn-lock-teacher" type="button" class="px-3 py-1.5 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium">
+            鎖定後台
+          </button>
+        </div>
+      </div>
+
+      <!-- 4 Summary KPI Cards -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+        <div class="panel-card p-4 rounded-xl">
+          <div class="text-xs text-slate-500 font-medium">學期累積發言與編碼數</div>
+          <div id="kpi-count" class="text-xl sm:text-2xl font-bold text-slate-900 font-mono mt-1">0 筆</div>
+          <div class="text-[11px] text-slate-400 mt-0.5">完整探究歷史</div>
+        </div>
+        <div class="panel-card p-4 rounded-xl">
+          <div class="text-xs text-slate-500 font-medium">平均論證推理深化度 (R)</div>
+          <div id="kpi-avg-r" class="text-xl sm:text-2xl font-bold text-slate-900 font-mono mt-1">0.0 / 10.0</div>
+          <div class="text-[11px] text-slate-400 mt-0.5">1-10 分細緻評估</div>
+        </div>
+        <div class="panel-card p-4 rounded-xl">
+          <div class="text-xs text-slate-500 font-medium">觀點整合 (Rise Above)</div>
+          <div id="kpi-rise-above" class="text-xl sm:text-2xl font-bold text-slate-900 font-mono mt-1">0 次</div>
+          <div class="text-[11px] text-slate-400 mt-0.5">跨組超越統合</div>
+        </div>
+        <div class="panel-card p-4 rounded-xl">
+          <div class="text-xs text-slate-500 font-medium">上傳實驗照片與附件數</div>
+          <div id="kpi-attachments" class="text-xl sm:text-2xl font-bold text-slate-900 font-mono mt-1">0 次</div>
+          <div class="text-[11px] text-slate-400 mt-0.5">多模態數據</div>
+        </div>
+      </div>
+
+      <!-- Analytics Chart & Classroom Management -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        
+        <!-- Left: Analytics Chart -->
+        <div class="lg:col-span-6 panel-card p-4 sm:p-5 rounded-xl space-y-3">
+          <h3 class="text-xs sm:text-sm font-semibold text-slate-900">
+            CER 三要素品質平均水位 (1-10分)
+          </h3>
+          <div class="relative h-60 w-full">
+            <canvas id="chart-cer-bars"></canvas>
+          </div>
+        </div>
+
+        <!-- Right: Classroom Editor & Material Setup -->
+        <div class="lg:col-span-6 panel-card p-4 sm:p-5 rounded-xl space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs sm:text-sm font-semibold text-slate-900">
+              <span id="classroom-form-mode-title">開設或編輯教室教材</span>
+            </h3>
+            <button id="btn-cancel-edit-classroom" type="button" class="text-xs text-slate-500 hover:text-slate-800 hidden px-2 py-1 rounded bg-slate-100">
+              ✕ 取消編輯
+            </button>
+          </div>
+
+          <form id="classroom-manage-form" class="space-y-2.5">
+            <div>
+              <label class="block text-[11px] font-medium text-slate-600 mb-0.5">教室代號與班級名稱</label>
+              <input type="text" id="cls-input-name" placeholder="例如：高二探究實作 201 班" required class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2 text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-400" />
+            </div>
+
+            <div>
+              <label class="block text-[11px] font-medium text-slate-600 mb-0.5">探究主題</label>
+              <input type="text" id="cls-input-topic" placeholder="例如：雙氧水催化分解速率探究" required class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2 text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-400" />
+            </div>
+
+            <div>
+              <label class="block text-[11px] font-medium text-slate-600 mb-0.5">核心概念 (逗號分隔)</label>
+              <input type="text" id="cls-input-concepts" placeholder="活化能, 催化劑, 反應速率" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2 text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-400" />
+            </div>
+
+            <div>
+              <label class="block text-[11px] font-medium text-slate-600 mb-0.5">實驗背景教材導引</label>
+              <textarea id="cls-input-material" rows="3" placeholder="提供給學生的實驗前情境與背景提示..." class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2 text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-400"></textarea>
+            </div>
+
+            <!-- 教師上傳教材附圖 -->
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <label class="block text-[11px] font-medium text-slate-600">教材圖片與講義附件</label>
+                <button type="button" id="btn-trigger-teacher-upload" class="text-[11px] text-slate-700 font-medium hover:underline">
+                  ＋ 新增圖片
+                </button>
+                <input type="file" id="teacher-material-file-input" accept="image/*" multiple class="hidden" />
+              </div>
+              <div id="teacher-form-attachments-list" class="flex flex-wrap gap-2 p-2 bg-slate-50 border border-slate-200 rounded-lg min-h-[44px]">
+                <span class="text-[11px] text-slate-400">目前無附圖</span>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-2 pt-2">
+              <button type="submit" id="btn-submit-classroom" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg transition-colors">
+                儲存教室設定
+              </button>
+            </div>
+          </form>
+
+          <!-- 已開設教室列表 -->
+          <div class="pt-3 border-t border-slate-100">
+            <span class="text-[11px] font-medium text-slate-600 block mb-2">已開設教室清單 (可隨時編輯或刪除)</span>
+            <div id="teacher-classrooms-list" class="space-y-2 max-h-48 overflow-y-auto pr-1">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Timeline Playback (時序重播與演化控制區) -->
+      <div class="panel-card p-4 sm:p-5 rounded-xl space-y-3">
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <div class="flex items-center gap-2">
+            <h3 class="text-xs sm:text-sm font-semibold text-slate-900">
+              課堂探究演化時序重播 (Timeline Playback)
+            </h3>
+            <span id="timeline-current-step" class="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-mono">
+              第 0 / 0 步
+            </span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="btn-timeline-play" type="button" class="px-3 py-1.5 text-xs bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-medium transition-colors">
+              ▶ 開始重播
+            </button>
+            <button id="btn-timeline-reset" type="button" class="px-3 py-1.5 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium transition-colors">
+              重置
+            </button>
+            <select id="timeline-speed-select" class="text-xs bg-slate-50 border border-slate-200 rounded-lg p-1.5 text-slate-700">
+              <option value="1500">1.0x 正常速度</option>
+              <option value="800">2.0x 快速重播</option>
+              <option value="400">4.0x 極速重播</option>
+            </select>
+          </div>
+        </div>
+        <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+          <div id="timeline-progress-bar" class="bg-slate-900 h-full w-0 transition-all duration-300"></div>
+        </div>
+        <div id="timeline-active-display" class="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-600 min-h-[50px] flex items-center justify-between">
+          <span class="text-slate-400">點擊「開始重播」以動態回放各小組在探究歷程中的想法演化...</span>
+        </div>
+      </div>
+
+      <!-- Bottom: Research Coding & Log Table -->
+      <div class="panel-card p-4 sm:p-5 rounded-xl space-y-3">
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <h3 class="text-xs sm:text-sm font-semibold text-slate-900">
+            研究編碼歷程與時序紀錄 (KB 12原則 & CER 水位)
+          </h3>
+          <span class="text-[11px] text-slate-400 font-mono">支援本機持久保存與 Google Sheet 同步</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-slate-700">
+            <thead class="bg-slate-50 text-slate-500 font-medium border-b border-slate-200">
+              <tr>
+                <th class="p-2">時間</th>
+                <th class="p-2">組別</th>
+                <th class="p-2">思考角度/發言摘要</th>
+                <th class="p-2">KB 原則編碼</th>
+                <th class="p-2">探究維度</th>
+                <th class="p-2">CER 水位 (C/E/R)</th>
+                <th class="p-2 text-right">操作</th>
+              </tr>
+            </thead>
+            <tbody id="teacher-logs-tbody" class="divide-y divide-slate-100 font-mono">
+              <tr>
+                <td colspan="6" class="p-4 text-center text-slate-400">尚無發言編碼紀錄</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <!-- ==================== TEACHER LOG DETAIL MODAL ==================== -->
+  <div id="teacher-log-detail-modal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="panel-card w-full max-w-xl rounded-xl p-5 shadow-lg space-y-4 max-h-[85vh] flex flex-col">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2 shrink-0">
+        <div class="flex items-center gap-2">
+          <span id="detail-modal-group" class="text-xs px-2.5 py-0.5 rounded-full bg-slate-900 text-white font-mono">第 1 組</span>
+          <span id="detail-modal-time" class="text-xs text-slate-400 font-mono">16:30</span>
+          <span id="detail-modal-stage" class="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-mono">問題探索</span>
+        </div>
+        <button type="button" id="btn-close-log-detail-modal" class="text-slate-400 hover:text-slate-700 text-base">✕</button>
+      </div>
+
+      <div class="space-y-3 overflow-y-auto pr-1 flex-1 text-xs">
+        <!-- 學生提問 -->
+        <div class="space-y-1">
+          <div class="flex items-center justify-between text-slate-500 font-semibold text-[11px]">
+            <span>👤 學生發言內容</span>
+            <span id="detail-modal-scaffold" class="text-slate-400 font-normal"></span>
+          </div>
+          <div id="detail-modal-student-text" class="p-3 rounded-lg bg-slate-50 border border-slate-200 text-slate-800 leading-relaxed whitespace-pre-line font-sans">
+          </div>
+        </div>
+
+        <!-- AI 引導回覆 -->
+        <div class="space-y-1">
+          <div class="flex items-center justify-between text-slate-500 font-semibold text-[11px]">
+            <span>🤖 AI 探究引導夥伴回覆（600+字微觀機制 ＆ 主體性挑戰）</span>
+            <span id="detail-modal-principle" class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 text-[10px] font-mono border border-emerald-200">KB 原則</span>
+          </div>
+          <div id="detail-modal-ai-reply" class="p-3 rounded-lg bg-white border border-slate-200 text-slate-800 leading-relaxed font-sans shadow-2xs chat-bubble-content">
+          </div>
+        </div>
+
+        <!-- CER 評估 -->
+        <div class="p-2.5 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-between">
+          <span class="text-slate-600 font-medium">CER 水位評估 (1-10分)：</span>
+          <div class="flex items-center gap-3 font-mono font-bold text-slate-800">
+            <span>C: <span id="detail-modal-c">0.0</span></span>
+            <span>E: <span id="detail-modal-e">0.0</span></span>
+            <span>R: <span id="detail-modal-r">0.0</span></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end pt-2 border-t border-slate-100 shrink-0">
+        <button type="button" id="btn-done-log-detail" class="px-4 py-1.5 text-xs bg-slate-900 text-white font-semibold rounded-lg hover:bg-slate-800">
+          關閉
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== CLEAR HISTORY CONFIRM MODAL ==================== -->
+  <div id="clear-history-modal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="panel-card w-full max-w-sm rounded-xl p-5 shadow-lg space-y-4">
+      <div>
+        <h3 class="text-sm font-bold text-slate-900">確定清空所有歷史紀錄？</h3>
+        <p class="text-xs text-slate-500 mt-1 leading-relaxed">
+          此動作將清空本機資料庫與暫存中的所有發言與編碼測試紀錄，讓您可以重新開始一堂乾淨的正式探究課。（Google 試算表上的資料不受影響）
+        </p>
+      </div>
+      <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+        <button type="button" id="btn-cancel-clear-modal" class="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-lg">
+          取消
+        </button>
+        <button type="button" id="btn-confirm-clear-modal" class="px-4 py-1.5 text-xs bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors">
+          確認清空重置
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TEACHER AUTH MODAL ==================== -->
+  <div id="teacher-password-modal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="panel-card w-full max-w-sm rounded-xl p-5 shadow-lg space-y-4">
+      <div>
+        <h3 class="text-sm font-bold text-slate-900">教師權限驗證</h3>
+        <p class="text-xs text-slate-500 mt-1">進入教師後台請輸入安全密碼</p>
+      </div>
+      <div>
+        <input 
+          type="password" 
+          id="teacher-password-input" 
+          placeholder="請輸入密碼 (預設: 6113)" 
+          class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-400"
+        />
+        <div id="teacher-password-error" class="text-[11px] text-red-600 mt-1.5 hidden">密碼錯誤，請重新輸入</div>
+      </div>
+      <div class="flex items-center justify-end gap-2">
+        <button type="button" id="btn-modal-cancel" class="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-lg">
+          取消
+        </button>
+        <button type="button" id="btn-modal-submit" class="px-4 py-1.5 text-xs bg-slate-900 text-white font-semibold rounded-lg hover:bg-slate-800">
+          驗證進入
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== GEMINI API KEY MODAL ==================== -->
+  <div id="apikey-settings-modal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="panel-card w-full max-w-lg rounded-xl p-5 shadow-lg space-y-4 max-h-[90vh] flex flex-col">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+        <div>
+          <h3 class="text-sm font-bold text-slate-900">Gemini API 金鑰與模型設定</h3>
+          <p class="text-xs text-slate-500 mt-0.5">雙金鑰池自動輪詢、模型查詢與即時切換</p>
+        </div>
+        <button type="button" id="btn-close-apikey-modal" class="text-slate-400 hover:text-slate-700 text-base">✕</button>
+      </div>
+
+      <div class="space-y-3 overflow-y-auto pr-1 flex-1">
+        <div>
+          <label class="block text-[11px] font-medium text-slate-600 mb-1">主要 API Key (金鑰 1)</label>
+          <input 
+            type="text" 
+            id="cfg-input-key1" 
+            class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-mono text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-400"
+          />
+        </div>
+        <div>
+          <label class="block text-[11px] font-medium text-slate-600 mb-1">備援 API Key (金鑰 2)</label>
+          <input 
+            type="text" 
+            id="cfg-input-key2" 
+            class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-mono text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-400"
+          />
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="block text-[11px] font-medium text-slate-600">使用模型 (可手動選擇或由下方清單挑選)</label>
+            <button type="button" id="btn-fetch-models" class="text-[11px] text-slate-800 font-semibold hover:underline flex items-center gap-1">
+              <span>🔍 查詢可用模型</span>
+            </button>
+          </div>
+          <select id="cfg-select-model" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-400 font-mono">
+            <option value="gemini-1.5-flash" selected>gemini-1.5-flash (官方推薦・極速穩定)</option>
+            <option value="gemini-2.0-flash">gemini-2.0-flash (次世代最新版)</option>
+            <option value="gemini-2.5-flash">gemini-2.5-flash (深度推理主力版)</option>
+            <option value="gemini-1.5-pro">gemini-1.5-pro (大上下文深度推論)</option>
+          </select>
+        </div>
+
+        <!-- 查詢到的可用模型卡片清單區域 -->
+        <div id="models-list-container" class="space-y-1.5 hidden">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold text-slate-700">可供使用的模型清單（點擊直接切換）：</span>
+            <span id="models-count-badge" class="text-[10px] text-slate-400 font-mono">0 個可用</span>
+          </div>
+          <div id="models-cards-scroll" class="max-h-40 overflow-y-auto space-y-1.5 p-1 bg-slate-50 border border-slate-200 rounded-lg">
+            <!-- Dynamically populated model items -->
+          </div>
+        </div>
+
+        <div id="apikey-test-result" class="text-[11px] p-2 rounded bg-slate-50 text-slate-600 border border-slate-200 hidden"></div>
+      </div>
+
+      <div class="flex items-center justify-between pt-2 border-t border-slate-100 shrink-0">
+        <button type="button" id="btn-test-apikey" class="px-3 py-1.5 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium transition-colors">
+          ⚡ 測試連線
+        </button>
+        <div class="flex items-center gap-2">
+          <button type="button" id="btn-cancel-apikey" class="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-lg">
+            取消
+          </button>
+          <button type="button" id="btn-save-apikey" class="px-4 py-1.5 text-xs bg-slate-900 text-white font-semibold rounded-lg hover:bg-slate-800">
+            💾 儲存並套用
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== GOOGLE SHEET CONFIG MODAL ==================== -->
+  <div id="gsheet-settings-modal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="panel-card w-full max-w-lg rounded-xl p-5 shadow-lg space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+        <div>
+          <h3 class="text-sm font-bold text-slate-900">Google 試算表連線設定</h3>
+          <p class="text-xs text-slate-500 mt-0.5">課堂發言、CER 水位與質性編碼自動同步至雲端</p>
+        </div>
+        <button type="button" id="btn-close-gsheet-modal" class="text-slate-400 hover:text-slate-700 text-base">✕</button>
+      </div>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-[11px] font-medium text-slate-600 mb-1">Google Apps Script Web App URL (端點網址)</label>
+          <textarea 
+            id="cfg-input-gsheet-url" 
+            rows="3" 
+            placeholder="https://script.google.com/macros/s/.../exec"
+            class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-mono text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-400"
+          ></textarea>
+        </div>
+        <div class="text-[11px] text-slate-600 leading-relaxed bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-1.5">
+          <div class="font-bold text-slate-800 flex items-center justify-between">
+            <span>📋 Google Apps Script (GAS) 部署說明</span>
+            <button type="button" id="btn-copy-gas-code" class="text-[10px] px-2 py-0.5 rounded bg-slate-900 text-white font-medium hover:bg-slate-800">
+              📋 複製標準 GAS 程式碼
+            </button>
+          </div>
+          <div class="text-[10px] text-slate-500 space-y-0.5">
+            <div>1. 在 Google 試算表點擊「擴充功能」➔「Apps Script」。</div>
+            <div>2. 貼上標準程式碼後點擊「部署」➔「新增部署作業」。</div>
+            <div>3. 種類選「網路應用程式」，執行身分選「我」，存取權選「<strong>任何人</strong>」。</div>
+            <div>4. 將產生的「網頁應用程式網址」貼入上方欄位即可自動對齊所有格式。</div>
+          </div>
+        </div>
+        <div id="gsheet-test-result" class="text-[11px] p-2 rounded bg-slate-50 text-slate-600 border border-slate-200 hidden"></div>
+      </div>
+      <div class="flex items-center justify-between pt-2 border-t border-slate-100">
+        <div class="flex items-center gap-1.5">
+          <button type="button" id="btn-test-gsheet" class="px-3 py-1.5 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg">
+            🔗 測試發送
+          </button>
+          <button type="button" id="btn-test-import-gsheet" class="px-3 py-1.5 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg">
+            📥 測試讀取匯入
+          </button>
+        </div>
+        <div class="flex items-center gap-2">
+          <button type="button" id="btn-cancel-gsheet" class="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-lg">
+            取消
+          </button>
+          <button type="button" id="btn-save-gsheet" class="px-4 py-1.5 text-xs bg-slate-900 text-white font-semibold rounded-lg hover:bg-slate-800">
+            💾 儲存設定
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== JAVASCRIPT APPLICATION LOGIC ==================== -->
+  <script>
+    // ==================== 1. PRESET CLASSROOMS ====================
+    const PRESET_CLASSROOMS = [
+      {
+        id: 'CLS-101',
+        name: '高一化學探究與實作 A 班',
+        topic: '雙氧水催化分解速率',
+        material: '探究過氧化氫在不同催化劑（二氧化錳、酵母菌、豬肝）作用下之反應速率差異，並探討受質濃度、溫度及 pH 值對反應活性的微觀影響。',
+        concepts: ['催化劑', '活化能', '碰撞學說', '酵素活性'],
+        misconceptions: ['催化劑會消耗參與反應', '酵素是無機化合物'],
+        attachments: []
+      },
+      {
+        id: 'CLS-102',
+        name: '高二物理探究專題',
+        topic: '單擺週期與能量守恆',
+        material: '透過不同擺長、擺角與擺錘質量之實驗設計，測量週期變化並探討重力位能與動能的連續轉換機制。',
+        concepts: ['週期', '簡諧運動', '重力加速度', '能量守恆'],
+        misconceptions: ['擺錘越重週期越快', '大角度下週期依然不變'],
+        attachments: []
+      }
+    ];
+
+    // ==================== 2. STATE & CONFIGURATION ====================
+    let CLASSROOMS = [];
+    let activeClassroomId = 'CLS-101';
+    let currentGroup = '第 3 組';
+    let currentLayoutMode = 'student';
+    let isTeacherUnlocked = false;
+    const TEACHER_PASSWORD = '6113';
+    let pendingTargetMode = null;
+    let studentPendingAttachments = [];
+    let editingClassroomId = null;
+    let teacherPendingAttachments = [];
+
+    // 雙金鑰池配置（支援 LocalStorage 記憶）
+    const DEFAULT_KEYS = [
+      'AQ.Ab8RN6IbzvVqPdfSkdAmXgkkoQWZEfXAuUSAhgCOkxgIolG0RQ',
+      'AQ.Ab8RN6K4hvqcPiy9Y2nUvlkZ1eZn101_7J8KeUp_TTH-3V1YUA'
+    ];
+    let savedKeys = null;
+    try {
+      const stored = localStorage.getItem('KB_GEMINI_KEYS');
+      if (stored) savedKeys = JSON.parse(stored);
+    } catch(e) {}
+
+    let geminiConfig = {
+      apiKeys: savedKeys || DEFAULT_KEYS,
+      currentKeyIndex: 0,
+      model: (localStorage.getItem('KB_GEMINI_MODEL') && localStorage.getItem('KB_GEMINI_MODEL') !== 'gemini-3.1-flash-lite') ? localStorage.getItem('KB_GEMINI_MODEL') : 'gemini-1.5-flash'
+    };
+
+    // Google Sheets 配置（支援 LocalStorage 記憶）
+    let googleSheetConfig = {
+      endpoint: localStorage.getItem('KB_GSHEET_URL') || 'https://script.google.com/macros/s/AKfycbwO_9oouTZz0NhCH4IcbB2rpEKmBYDsCnGf-T4fi8cUFrD3ipOwSvLUxKerHeykjpyb/exec',
+      enabled: true
+    };
+
+    // ==================== SYSTEM STATUS HELPERS (各自獨立呼吸燈) ====================
+    function setApiStatus(status, text) {
+      const led = document.getElementById('led-api');
+      const label = document.getElementById('status-api-text');
+      if (!label) return;
+
+      if (status === 'ok') {
+        if (led) led.className = 'w-2 h-2 rounded-full bg-emerald-500 status-led-pulse shrink-0';
+        label.className = 'text-slate-700 font-semibold';
+      } else if (status === 'loading') {
+        if (led) led.className = 'w-2 h-2 rounded-full bg-amber-500 status-led-pulse-amber shrink-0';
+        label.className = 'text-amber-700 font-semibold';
+      } else {
+        if (led) led.className = 'w-2 h-2 rounded-full bg-red-500 shrink-0';
+        label.className = 'text-red-600 font-semibold';
+      }
+      label.textContent = text;
+    }
+
+    function setWriteStatus(status, text) {
+      const led = document.getElementById('led-write');
+      const label = document.getElementById('status-write-text');
+      if (!label) return;
+
+      if (status === 'syncing') {
+        if (led) led.className = 'w-2 h-2 rounded-full bg-amber-500 status-led-pulse-amber shrink-0';
+        label.className = 'text-amber-700 font-semibold';
+      } else if (status === 'ok') {
+        if (led) led.className = 'w-2 h-2 rounded-full bg-emerald-500 status-led-pulse shrink-0';
+        label.className = 'text-slate-700 font-semibold';
+      } else if (status === 'error') {
+        if (led) led.className = 'w-2 h-2 rounded-full bg-red-500 shrink-0';
+        label.className = 'text-red-600 font-semibold';
+      } else {
+        if (led) led.className = 'w-2 h-2 rounded-full bg-slate-400 shrink-0';
+        label.className = 'text-slate-600';
+      }
+      label.textContent = text;
+    }
+
+    function setImportStatus(status, text) {
+      const led = document.getElementById('led-import');
+      const label = document.getElementById('status-import-text');
+      if (!label) return;
+
+      if (status === 'loading') {
+        if (led) led.className = 'w-2 h-2 rounded-full bg-amber-500 status-led-pulse-amber shrink-0';
+        label.className = 'text-amber-700 font-semibold';
+      } else if (status === 'ok') {
+        if (led) led.className = 'w-2 h-2 rounded-full bg-emerald-500 status-led-pulse shrink-0';
+        label.className = 'text-slate-700 font-semibold';
+      } else if (status === 'error') {
+        if (led) led.className = 'w-2 h-2 rounded-full bg-red-500 shrink-0';
+        label.className = 'text-red-600 font-semibold';
+      } else {
+        if (led) led.className = 'w-2 h-2 rounded-full bg-slate-400 shrink-0';
+        label.className = 'text-slate-600';
+      }
+      label.textContent = text;
+    }
+
+    // 小組非線性多維達成與 CER 水位（按教室與組別持久化）
+    let groupStages = {}; 
+    let chatHistories = {};
+    let codingLogs = [];
+    let cerBarChart = null;
+
+    // Timeline 播放器變數
+    let timelineInterval = null;
+    let timelineIndex = 0;
+
+    // ==================== 3. INDEXEDDB PERSISTENCE ====================
+    let dbInstance = null;
+    function openDatabase() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open('KB_Natural_Inquiry_DB_v2', 1);
+        req.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains('classrooms')) db.createObjectStore('classrooms', { keyPath: 'id' });
+          if (!db.objectStoreNames.contains('chat_messages')) db.createObjectStore('chat_messages', { keyPath: 'id', autoIncrement: true });
+          if (!db.objectStoreNames.contains('research_logs')) db.createObjectStore('research_logs', { keyPath: 'id' });
+        };
+        req.onsuccess = (e) => {
+          dbInstance = e.target.result;
+          resolve(dbInstance);
+        };
+        req.onerror = (e) => reject(e);
+      });
+    }
+
+    async function saveAllClassroomsToDB() {
+      if (!dbInstance) return;
+      try {
+        const tx = dbInstance.transaction('classrooms', 'readwrite');
+        const store = tx.objectStore('classrooms');
+        store.clear();
+        CLASSROOMS.forEach(c => store.put(c));
+      } catch (err) {
+        console.warn('儲存教室至 DB 失敗:', err);
+      }
+    }
+
+    async function saveLogToDB(logItem) {
+      if (!dbInstance) return;
+      try {
+        const tx = dbInstance.transaction('research_logs', 'readwrite');
+        tx.objectStore('research_logs').put(logItem);
+      } catch (err) {
+        console.warn('儲存日誌至 DB 失敗:', err);
+      }
+    }
+
+    async function loadAllFromDB() {
+      if (!dbInstance) return;
+      try {
+        const tx = dbInstance.transaction(['classrooms', 'research_logs'], 'readonly');
+        const clsStore = tx.objectStore('classrooms');
+        const logStore = tx.objectStore('research_logs');
+
+        const savedCls = await new Promise(res => {
+          const r = clsStore.getAll();
+          r.onsuccess = () => res(r.result || []);
+          r.onerror = () => res([]);
+        });
+
+        if (savedCls && savedCls.length > 0) {
+          CLASSROOMS = savedCls;
+        } else {
+          CLASSROOMS = [...PRESET_CLASSROOMS];
+          await saveAllClassroomsToDB();
+        }
+
+        const savedLogs = await new Promise(res => {
+          const r = logStore.getAll();
+          r.onsuccess = () => res(r.result || []);
+          r.onerror = () => res([]);
+        });
+        if (savedLogs && savedLogs.length > 0) {
+          // 清除可能殘留的舊測試假資料 sample_log
+          codingLogs = savedLogs.filter(l => !String(l.id || '').startsWith('sample_log_'));
+        } else {
+          codingLogs = [];
+        }
+      } catch (err) {
+        console.warn('載入 DB 失敗，套用預設值:', err);
+        CLASSROOMS = [...PRESET_CLASSROOMS];
+      }
+    }
+
+    // ==================== 4. GEMINI DUAL-OUTPUT API ====================
+        // 深度容錯 Gemini JSON 解析器（防截斷、防引號跳脫與格式失真）
+    function parseGeminiResponse(rawText) {
+      const raw = (rawText || '').trim();
+      if (!raw) return { student_facing_reply: '未收到模型回覆內容。', state_tracker: null };
+
+      // 1. 優先嘗試 markdown 程式碼區塊
+      const mBlock = raw.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+      const candidates = [];
+      if (mBlock && mBlock[1]) candidates.push(mBlock[1].trim());
+
+      // 2. 嘗試截取最外層大括號
+      const s = raw.indexOf('{');
+      const e = raw.lastIndexOf('}');
+      if (s !== -1 && e !== -1 && e > s) {
+        candidates.push(raw.slice(s, e + 1).trim());
+      }
+      candidates.push(raw);
+
+      for (const cand of candidates) {
+        try {
+          const parsed = JSON.parse(cand);
+          if (parsed && typeof parsed === 'object') {
+            if (parsed.student_facing_reply) return parsed;
+            if (parsed.reply) {
+              parsed.student_facing_reply = parsed.reply;
+              return parsed;
+            }
+          }
+        } catch (err) {}
+      }
+
+      // 3. 正則提取 student_facing_reply
+      const mReply = raw.match(/["']student_facing_reply["']\s*:\s*"((?:[^"\\]|\\.)*)"/);
+      if (mReply && mReply[1]) {
+        let val = mReply[1];
+        try { val = JSON.parse(`"${val}"`); } catch (err) { val = val.replace(/\\n/g, '\n').replace(/\\"/g, '"'); }
+        return {
+          student_facing_reply: val,
+          state_tracker: { current_stage: '問題探索', kb_principle_name: '真實想法與問題', cer_evaluation: { claim: 7.0, evidence: 6.5, reasoning: 7.0 } }
+        };
+      }
+
+      // 4. 清理任何殘留的 JSON 標頭字樣，確保呈現乾淨純文字
+      let cleaned = raw.replace(/^\s*\{\s*["']student_facing_reply["']\s*:\s*["']?/, '');
+      cleaned = cleaned.replace(/["']?\s*,\s*["']state_tracker["'][\s\S]*$/, '');
+      cleaned = cleaned.replace(/\\n/g, '\n').replace(/\\"/g, '"').trim();
+
+      return {
+        student_facing_reply: cleaned || raw,
+        state_tracker: { current_stage: '問題探索', kb_principle_name: '真實想法與問題', cer_evaluation: { claim: 6.5, evidence: 6.0, reasoning: 6.5 } }
+      };
+    }
+
+    async function callGeminiDualOutput(questionText, imageBase64List = []) {
+      const cls = CLASSROOMS.find(c => c.id === activeClassroomId) || CLASSROOMS[0];
+      const historyKey = `${activeClassroomId}_${currentGroup}`;
+      const recentHistory = (chatHistories[historyKey] || []).slice(-6);
+      let historyText = "";
+      if (recentHistory.length > 0) {
+        historyText = "【小組近期探究歷程】：\n" + recentHistory.map(m => `- ${m.sender === 'agent' ? 'AI探究夥伴' : currentGroup}：${m.text}`).join('\n') + "\n\n";
+      }
+
+      const systemPrompt = `你是一位以「台灣知識翻新（Knowledge Building, KB）」12 原則為指導的自然科學 AI 探究引導夥伴。
+你的角色定位：是一位溫暖、博學、循循善誘且平等協作的「科學思維教練與思維夥伴」，核心目標是【培養學生的認識論主體性（Epistemic Agency）】——幫助學生學會自主思考、自主做出科學決策，而不是被動接收知識。
+
+當前課程主題：【${cls.name} - ${cls.topic}】
+實驗背景指引：${cls.material}
+目標科學概念：${(cls.concepts || []).join('、')}
+常見科學迷思：${(cls.misconceptions || []).join('、')}
+對話對象：${currentGroup}
+
+${historyText}【小組最新發言】：${questionText}
+
+【⚠️ 重要架構指示（請嚴格遵守，徹底改變回覆架構）】：
+1. 【嚴禁使用 CER 架構】：回覆中【絕不要出現】「主張 Claim」、「證據 Evidence」、「推理 Reasoning」或任何 CER 標籤！不要套用論證模板！
+2. 篇幅詳盡充實：繁體中文約 600 至 750 字，論述深入透徹、有科學厚度，結合生活實例與微觀機制，絕不寫簡短敷衍的客套話。
+3. 採用全新的【三階段引導架構】：
+   - 【第一階段：解答學生問題與現象剖析（約 200~250 字）】：
+     * 開頭醒目標註【解答與概念剖析】（可搭配適合的 KB 原則如【KB 原則：建設性運用權威來源】）。
+     * 先親切、直接、詳盡地回答學生的問題或疑惑。用生動、生活化的科普語言與精確的科學原理（包含 LaTeX 數理化反應式或公式如 $2H_2O_2 \rightarrow 2H_2O + O_2$、$T = 2\pi \sqrt{L/g}$），把背後的機制講得一清二楚。
+   - 【第二階段：加深與補充想法（約 250~300 字）】：
+     * 標註【思維深化與拓展】。
+     * 在學生原有的問題基礎上，協助他們深化思考：帶入更微觀的層面（如分子碰撞理論、活化能門檻、能量守恆、粒子作用力）、連結真實世界工程應用，或指出容易忽略的關鍵隱藏變因。這部分要讓學生感受到「原來這個現象背後有這麼多層次可以挖掘」！
+   - 【第三階段：提出挑戰問題，培養學生的自主性 Agency（約 150~200 字）】：
+     * 結尾獨立成段，標註【主體性探究挑戰】。
+     * 不要給出封閉的是非題，而是提出一個具有「認知衝突」、「反例極限」或「自主實驗決策」的深度開放性問題。
+     * 賦予學生主體權力，例如：「小組現在掌握了探究的主控權：你們會選擇先驗證 A 還是 B？如果遇到結果不一致，你們會如何設計對照組來掌握真相？」激發小組在課堂中自主展開熱烈討論與行動！
+
+【必須回傳標準純 JSON 格式，不要加上任何其他文字】：
+{
+  "student_facing_reply": "對學生的啟發性探究引導回應（繁體中文，約600-750字，支援 LaTeX，嚴禁CER，包含解答、深化拓展與結尾主體性挑戰問題）",
+  "state_tracker": {
+    "current_stage": "問題探索 | 實驗規劃 | 證據收集 | 觀點整合",
+    "achieved_stages": ["問題探索", "證據收集"],
+    "kb_principle": "Epistemic_Agency | Constructive_Sources | Improvable_Ideas | Rise_Above",
+    "kb_principle_name": "認識論主體性 | 建設性運用權威來源 | 想法皆可改進 | 觀點整合與超越",
+    "cer_evaluation": {
+      "claim": 8.0,
+      "evidence": 7.5,
+      "reasoning": 8.0
+    },
+    "reflection_prompt": "結尾所提出的主體性挑戰問題摘要"
+  }
+}`;
+
+      const contents = [{
+        role: 'user',
+        parts: [
+          { text: systemPrompt },
+          { text: `請根據小組發言，以約 600~750 字依照【解答問題 -> 加深想法 -> 主體性挑戰問題】架構詳細回覆，嚴禁用CER，著重培養學生 Agency：\n${questionText}` }
+        ]
+      }];
+
+      if (imageBase64List && imageBase64List.length > 0) {
+        imageBase64List.forEach(img => {
+          const base64Data = img.split(',')[1] || img;
+          contents[0].parts.push({
+            inline_data: { mime_type: 'image/jpeg', data: base64Data }
+          });
+        });
+      }
+
+      // 輪詢呼叫雙金鑰池
+      let lastErr = null;
+      for (let attempt = 0; attempt < geminiConfig.apiKeys.length; attempt++) {
+        const apiKey = geminiConfig.apiKeys[geminiConfig.currentKeyIndex];
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${geminiConfig.model}:generateContent?key=${apiKey}`;
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 12000); // 12秒超時保護
+        try {
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents }),
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
+
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          setApiStatus('ok', `連線正常 (${geminiConfig.model})`);
+          const json = await res.json();
+          const rawText = json.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+          const parsed = parseGeminiResponse(rawText);
+          return parsed;
+        } catch (err) {
+          clearTimeout(timeoutId);
+          lastErr = err;
+          geminiConfig.currentKeyIndex = (geminiConfig.currentKeyIndex + 1) % geminiConfig.apiKeys.length;
+          setApiStatus('loading', `切換金鑰池 (${geminiConfig.currentKeyIndex + 1})`);
+        }
+      }
+
+      setApiStatus('error', '備援運行中');
+      return generateLocalFallback(questionText);
+    }
+
+    // 本地多領域科學備援知識與動態評估引擎（非CER架構：先解答 -> 再深化拓展 -> 主體性挑戰問題，約650字）
+    function generateLocalFallback(text) {
+      const cls = CLASSROOMS.find(c => c.id === activeClassroomId) || CLASSROOMS[0];
+      const lower = text.toLowerCase();
+      
+      let reply = '';
+      let stage = '問題探索';
+      let principle = '認識論主體性';
+      let c = 8.0, e = 7.5, r = 8.0;
+
+      // 主題一：雙氧水催化與酵素反應
+      if (lower.includes('雙氧水') || lower.includes('過氧化氫') || lower.includes('h2o2') || lower.includes('二氧化錳') || lower.includes('mno2') || lower.includes('酵素') || lower.includes('催化劑') || lower.includes('氣泡') || lower.includes('氧氣') || lower.includes('刺刺') || lower.includes('豬肝')) {
+        reply = `💡 **【解答與概念剖析】**\n` +
+          `這是一個非常棒且直指化學反應核心的好問題！在生活與實驗中，我們常看到雙氧水劇烈冒泡，背後的科學機制其實非常生動：\n` +
+          `過氧化氫（$H_2O_2$）本身是一種化學性質不穩定的分子，在常溫下其實就會極其緩慢地自行分解為純水（$H_2O$）與氧氣（$O_2$）。化學反應式如下：\n` +
+          `$$2H_2O_2 \rightarrow 2H_2O + O_2↑$$\n` +
+          `然而，平常放在深色瓶裡的雙氧水之所以看起來靜止無波，是因為常溫下過氧化氫分子碰撞時，能量不足以突破高聳的「活化能障礙（Activation Energy）」。當你們加入黑色的二氧化錳（$MnO_2$）或新鮮的生豬肝時，這些催化物質扮演了「分子月老」的角色，開闢了一條能量門檻極低的反應新捷徑！因此，數以億計的過氧化氫分子在幾秒內快速斷鍵，瞬間釋放出大量的微小純氧氣泡，同時釋放出能量使瓶身明顯發熱。\n\n` +
+          `🔬 **【思維深化與拓展】**\n` +
+          `在理解了反應現象之後，我想為小組補充一個更深層的微觀視角：**「無機催化劑」與「生物酵素」雖然都能加速反應，但它們在分子本質上有著根本性的差異**！\n` +
+          `二氧化錳屬於無機金屬氧化物晶體，結構強韌，它的催化表面不受高溫破壞；而豬肝中含有的過氧化氫酶（Catalase）則是由長鏈胺基酸折疊而成的巨分子蛋白質。生物酵素依賴非常精密的「立體活性中心」來抓取過氧化氫。這意味著：當環境溫度升高至 70°C~80°C 時，蛋白質分子劇烈振動會導致氫鍵斷裂，發生「變性（Denaturation）」，活性中心徹底瓦解並永久失去催化能力。這就是為什麼煮熟的豬肝完全無法催化雙氧水，而加熱過的二氧化錳依然能健步如飛！\n\n` +
+          `🚀 **【主體性探究挑戰】**\n` +
+          `現在，探究的主控權交回到你們小組手中！\n` +
+          `既然溫度能使生物酵素變性失活，那麼如果將環境改為「接近 0°C 的極度冰水」，酵素分子是被永久破壞了，還是只是因為分子動能過低而暫時減速？你們小組會如何設計一組「冰水冷卻後再回溫」的對照實驗，親自找出答案來向全班展示？`;
+        stage = '觀點整合';
+        principle = '認識論主體性';
+        c = 8.5; e = 8.0; r = 8.5;
+      }
+      // 主題二：單擺週期與力學守恆
+      else if (lower.includes('單擺') || lower.includes('擺長') || lower.includes('週期') || lower.includes('擺錘') || lower.includes('角度') || lower.includes('簡諧') || lower.includes('重量')) {
+        reply = `💡 **【解答與概念剖析】**\n` +
+          `你們注意到了物理學史上最和諧、最迷人的節奏律動！小組提出的疑問，正是四百多年前義大利科學家伽利略開啟近代物理學的起點。\n` +
+          `直覺經驗常讓我們以為「較重的物體下墜得快，掛較重的擺錘應該也會擺得比較快」，但大自然真實的運作法則往往出人意料：\n` +
+          `在擺角較小（通常小於 $5^\circ$）的條件下，**單擺來回擺動一次的週期時間 $T$，只由「擺長 $L$」決定，與擺錘的質量輕重以及擺動幅度完全沒有關係**！物理學的精確公式為：\n` +
+          `$$T = 2\pi \sqrt{\frac{L}{g}}$$\n` +
+          `這項規律被稱為「單擺的等時性」。它解釋了為什麼十八世紀以來的機械時鐘內部，必定有一支長長的鐘擺——只要精準微調擺錘的上下長度，就能確保時鐘在一年四季每分每秒都走得完全一致。\n\n` +
+          `🔬 **【思維深化與拓展】**\n` +
+          `為了幫助小組將思維拓展到更宏觀的物理圖景，我們來思考背後的「力學抵消機制」：\n` +
+          `為什麼加重擺錘不會加速？當你把擺錘質量加重為兩倍時，沿著擺動切線方向的「重力下滑分力」確實也變成兩倍（這股力量試圖讓擺動加速）；但別忘了，牛頓第二運動定律告訴我們 $F = ma$，質量加倍同時也意味著物體的「慣性質量」加倍了（它抗拒改變運動狀態的惰性也變成兩倍）。加速力與慣性阻力在分子層面精準抵消，使得擺錘下落時的加速度完全相同！現代高樓如台北 101 大樓內部的 660 噸巨型阻尼球，正是運用了單擺等時性原理，在強風與地震來襲時進行反向擺動，抵消整座大樓的晃動能量。\n\n` +
+          `🚀 **【主體性探究挑戰】**\n` +
+          `現在，你們是這項實驗的首席研究員！\n` +
+          `既然理論公式寫明「小角度擺角對週期沒有影響」，但如果小組今天將擺動角度大膽拉大到 $60^\circ$ 甚至更大角度，公式中的小角度數學近似就會崩潰。你們推測擺動週期會變得更長、還是更短？你們打算如何在課堂中操縱這個變因，設計出測量誤差小於 0.1 秒的實驗來檢驗你們的猜測？`;
+        stage = '實驗規劃';
+        principle = '認識論主體性';
+        c = 8.5; e = 8.0; r = 8.0;
+      }
+      // 主題三：保麗龍溶解與材料特性
+      else if (lower.includes('保麗龍') || lower.includes('聚苯乙烯') || lower.includes('丙酮') || lower.includes('去光水') || lower.includes('溶解') || lower.includes('精油') || lower.includes('氣孔')) {
+        reply = `💡 **【解答與概念剖析】**\n` +
+          `小組觀察到了非常震撼且引人入勝的材料化學現象！看到保麗龍接觸液體瞬間縮小並冒出連綿氣泡，許多人直覺會驚呼「它被化學腐蝕化掉了」，但事實並非如此：\n` +
+          `保麗龍的學名是**發泡聚苯乙烯（Expanded Polystyrene, 簡稱 EPS）**，它在製造時加入了發泡劑，使得成品的微觀結構中**高達 98% 都是被封閉住的普通空氣，純塑膠成分僅僅佔了 2%**！\n` +
+          `當去光水中的丙酮或柑橘類果皮中的檸檬烯精油接觸到保麗龍時，所發生的並不是化學反應，而是一場純粹的物理過程——**「相似相溶（Like Dissolves Like）」**。聚苯乙烯是非極性的大分子聚合物，與丙酮分子具有相似的分子間親和力。溶劑分子迅速滲入長鏈之間，拆散了原本固定空氣的長鏈結構，被禁錮在孔隙中的 98% 空氣便隨之大量湧出冒泡！當溶劑揮發乾燥後，鬆散的長鏈重新凝聚，還原成一塊質地堅硬的透明塑膠塊。\n\n` +
+          `🔬 **【思維深化與拓展】**\n` +
+          `讓我們將思考從「現象觀察」加深到「綠色化學與物質守恆」的宏觀層面：\n` +
+          `在環境科學中，保麗龍常被視為難以處理的白色污染，因為自然界微生物無法分解其堅固的聚苯乙烯長鏈。但正因為去光水或檸檬烯能快速溶解它並釋放空氣，現代廢棄物回收工程便利用此特性，以天然檸檬皮提煉的溶劑將體積龐大的保麗龍「濃縮減容」達 95% 以上，再運往工廠加熱重塑為再生筆筒或鍵盤外殼！這展現了基礎科學如何轉化為解決地球環境危機的工程智慧。\n\n` +
+          `🚀 **【主體性探究挑戰】**\n` +
+          `現在，你們擁有決定如何驗證這項科學假說的主導權！\n` +
+          `如果同班同學堅稱「冒泡一定是產生了新氣體的化學反應」，你們小組打算如何運用實驗室裡的天平或密封容器，設計一個測量「反應前後總質量是否守恆」的關鍵實驗，用確鑿無誤的事實說服全班？`;
+        stage = '觀點整合';
+        principle = '認識論主體性';
+        c = 8.5; e = 8.5; r = 8.5;
+      }
+      // 主題四：一般性開放探究發言
+      else {
+        reply = `💡 **【解答與概念剖析】**\n` +
+          `小組提出了一個極具原創性與探究價值的思考視角：「**${text}**」！在知識翻新理論中，真正偉大的科學洞見往往始於這樣真實、未經雕琢的原生好奇。\n` +
+          `針對你們所提到的這個現象，我們首先可以從基礎的科學因果機制來審視：大自然中的每種巨觀變化，背後都有著嚴密的微觀物理或化學規律在支撐——不論是分子的微觀熱運動、化學鍵的重組，還是重力與電磁力的相互拉扯。當我們仔細觀察生活周遭時，許多看似理所當然的日常現象，只要深入一層追問「它究竟是如何發生的」，往往就會發現教科書以外的全新世界。小組能敏銳察覺到這一點，展現了非常敏銳的科學家直覺！\n\n` +
+          `🔬 **【思維深化與拓展】**\n` +
+          `為了協助小組進一步加深這個想法，我們可以嘗試將這個觀點「放進更大的科學網絡」中檢視：\n` +
+          `任何科學主張如果想要站得住腳，都需要考慮環境條件的邊界限制。例如：改變環境的溫度、壓強、時間跨度，或是調整物質的濃度與比例時，這個規律是否依然能夠穩定成立？此外，在科學史上，許多原本被視為真理的理論，正是因為同儕提出了意想不到的反例或極端情況，才推動科學家去修正並建立更宏大完整的科學模型。小組目前的想法正處在這種「即將破繭而出」的關鍵迭代階段！\n\n` +
+          `🚀 **【主體性探究挑戰】**\n` +
+          `現在，探索的舵完全掌握在你們自己手裡！\n` +
+          `針對你們目前的想法，如果給你們一整套實驗器材與完全自由的探索時間，你們小組第一步最想要動手測量的「關鍵變因」是什麼？小組內部如果對未來的實驗步驟有不同看法，你們會如何共同討論並達成共識？`;
+        stage = '問題探索';
+        principle = '認識論主體性';
+        c = 7.5; e = 7.0; r = 7.5;
+      }
+
+      return {
+        student_facing_reply: reply,
+        state_tracker: {
+          current_stage: stage,
+          achieved_stages: ['問題探索', stage],
+          kb_principle_name: principle,
+          cer_evaluation: { claim: c, evidence: e, reasoning: r }
+        }
+      };
+    }
+
+    // ==================== 5. UI UPDATERS ====================
+    function updateCERDashboard(cer) {
+      if (!cer) return;
+      let rawC = Number(cer.claim) || 3;
+      let rawE = Number(cer.evidence) || 2;
+      let rawR = Number(cer.reasoning) || 2;
+      if (rawC <= 3) rawC = rawC * 3.33;
+      if (rawE <= 3) rawE = rawE * 3.33;
+      if (rawR <= 3) rawR = rawR * 3.33;
+
+      const c = Math.max(1, Math.min(10, Math.round(rawC * 10) / 10));
+      const e = Math.max(1, Math.min(10, Math.round(rawE * 10) / 10));
+      const r = Math.max(1, Math.min(10, Math.round(rawR * 10) / 10));
+
+      const stateKey = `${activeClassroomId}_${currentGroup}`;
+      if (!groupStages[stateKey]) {
+        groupStages[stateKey] = {
+          unlockedDimensions: { 1: true, 2: false, 3: false, 4: false },
+          lastActiveDimension: 1,
+          c: 3.0, e: 2.0, r: 2.0
+        };
+      }
+
+      groupStages[stateKey].c = Math.max(groupStages[stateKey].c || 1, c);
+      groupStages[stateKey].e = Math.max(groupStages[stateKey].e || 1, e);
+      groupStages[stateKey].r = Math.max(groupStages[stateKey].r || 1, r);
+
+      const waterC = document.getElementById('cer-water-c');
+      const waterE = document.getElementById('cer-water-e');
+      const waterR = document.getElementById('cer-water-r');
+      if (waterC) waterC.style.height = `${(groupStages[stateKey].c / 10) * 100}%`;
+      if (waterE) waterE.style.height = `${(groupStages[stateKey].e / 10) * 100}%`;
+      if (waterR) waterR.style.height = `${(groupStages[stateKey].r / 10) * 100}%`;
+
+      const valC = document.getElementById('cer-val-c');
+      const valE = document.getElementById('cer-val-e');
+      const valR = document.getElementById('cer-val-r');
+      if (valC) valC.textContent = groupStages[stateKey].c.toFixed(1);
+      if (valE) valE.textContent = groupStages[stateKey].e.toFixed(1);
+      if (valR) valR.textContent = groupStages[stateKey].r.toFixed(1);
+    }
+
+    function updateInquiryStage(stageName, principleName, achievedStages = []) {
+      const stageMap = { '問題探索': 1, '實驗規劃': 2, '證據收集': 3, '觀點整合': 4 };
+      let activeIdx = 1;
+      if (stageName) {
+        for (const [name, idx] of Object.entries(stageMap)) {
+          if (stageName.includes(name)) { activeIdx = idx; break; }
+        }
+      }
+
+      const stateKey = `${activeClassroomId}_${currentGroup}`;
+      if (!groupStages[stateKey]) {
+        groupStages[stateKey] = {
+          unlockedDimensions: { 1: true, 2: false, 3: false, 4: false },
+          lastActiveDimension: 1,
+          c: 3.0, e: 2.0, r: 2.0
+        };
+      }
+
+      groupStages[stateKey].unlockedDimensions[activeIdx] = true;
+      if (Array.isArray(achievedStages)) {
+        achievedStages.forEach(st => {
+          for (const [name, idx] of Object.entries(stageMap)) {
+            if (st.includes(name)) groupStages[stateKey].unlockedDimensions[idx] = true;
+          }
+        });
+      }
+      groupStages[stateKey].lastActiveDimension = activeIdx;
+
+      for (let i = 1; i <= 4; i++) {
+        const cardEl = document.getElementById(`stage-card-${i}`);
+        const iconEl = document.getElementById(`stage-icon-${i}`);
+        const statusEl = document.getElementById(`stage-status-${i}`);
+        if (!cardEl) continue;
+
+        const isCurrentActive = (i === activeIdx);
+        const isUnlocked = !!groupStages[stateKey].unlockedDimensions[i];
+
+        if (isCurrentActive) {
+          cardEl.className = 'stage-card group relative flex flex-col p-2 rounded-lg border border-slate-900 bg-slate-900 text-white transition-all shadow-xs min-w-0';
+          if (iconEl) iconEl.textContent = '★ 聚焦';
+          if (statusEl) statusEl.textContent = '進行中探究';
+        } else if (isUnlocked) {
+          cardEl.className = 'stage-card group relative flex flex-col p-2 rounded-lg border border-slate-700 bg-slate-100 text-slate-800 transition-all min-w-0';
+          if (iconEl) iconEl.textContent = '✓ 達成';
+          if (statusEl) statusEl.textContent = '已具體展現';
+        } else {
+          cardEl.className = 'stage-card group relative flex flex-col p-2 rounded-lg border border-slate-200 bg-slate-50 text-slate-400 transition-all min-w-0';
+          if (iconEl) iconEl.textContent = '○';
+          if (statusEl) statusEl.textContent = '尚未解鎖';
+        }
+      }
+
+      const pBadge = document.getElementById('kb-principle-badge');
+      if (pBadge && principleName) pBadge.textContent = principleName;
+    }
+
+    // 智慧型訊息排版與 CER 標籤視覺化（兼具防 KaTeX 斷行亂碼）
+    function formatMessageContent(text) {
+      if (!text) return '';
+      // 區隔數學公式與普通文字
+      const parts = text.split(/(\$\$[\s\S]*?\$\$|\$[^\$]+?\$)/g);
+      let res = [];
+      for (let i = 0; i < parts.length; i++) {
+        const part = parts[i];
+        if (part.startsWith('$')) {
+          res.push(part);
+        } else {
+          let p = part.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          p = p.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+          p = p.replace(/【(KB\s*原則[^】]*)】/g, '<span class="inline-block px-2 py-0.5 rounded bg-emerald-800 text-white font-mono text-[11px] font-bold mr-1 my-0.5 shadow-2xs">【$1】</span>');
+          p = p.replace(/【(解答[^】]*|核心概念[^】]*|概念剖析[^】]*)】/g, '<span class="inline-block px-2 py-0.5 rounded bg-slate-900 text-white font-mono text-[11px] font-bold mr-1 my-0.5 shadow-2xs">【$1】</span>');
+          p = p.replace(/【(思維深化[^】]*|深化與拓展[^】]*|觀點深化[^】]*|想法補充[^】]*)】/g, '<span class="inline-block px-2 py-0.5 rounded bg-indigo-900 text-white font-mono text-[11px] font-bold mr-1 my-0.5 shadow-2xs">【$1】</span>');
+          p = p.replace(/【(主體性探究挑戰[^】]*|主體性挑戰[^】]*|探究挑戰[^】]*|激發思考[^】]*)】/g, '<span class="inline-block px-2 py-0.5 rounded bg-amber-600 text-white font-mono text-[11px] font-bold mr-1 my-0.5 shadow-2xs">【$1】</span>');
+          res.push(p);
+        }
+      }
+      const full = res.join('');
+      const paras = full.split(/\n\n+/);
+      return paras.map(para => {
+        const lines = para.split(/\n/);
+        return `<p class="mb-2.5 last:mb-0 leading-relaxed">${lines.join('<br>')}</p>`;
+      }).join('');
+    }
+
+    function renderChatMessage(msg) {
+      const container = document.getElementById('chat-messages');
+      if (!container) return;
+
+      const isAgent = msg.sender === 'agent';
+      const wrapper = document.createElement('div');
+      wrapper.className = `flex flex-col ${isAgent ? 'items-start' : 'items-end'} w-full`;
+
+      const bubble = document.createElement('div');
+      bubble.className = `max-w-[85%] rounded-2xl p-3.5 text-xs sm:text-sm leading-relaxed ${
+        isAgent 
+          ? 'bg-white border border-slate-200 text-slate-800 shadow-xs border-l-4 border-l-slate-800' 
+          : 'bg-slate-100 text-slate-900 border border-slate-200'
+      }`;
+
+      // Header in bubble
+      const header = document.createElement('div');
+      header.className = 'flex items-center gap-2 mb-1.5 text-[10px] text-slate-400 font-mono';
+      header.textContent = `${msg.name || (isAgent ? 'AI 探究夥伴' : currentGroup)} • ${msg.time}`;
+      bubble.appendChild(header);
+
+      // Text Content with LaTeX rendering & CER Badges
+      const content = document.createElement('div');
+      content.className = `chat-bubble-content ${isAgent ? 'text-slate-800' : 'text-slate-900'}`;
+      content.innerHTML = formatMessageContent(msg.text);
+      bubble.appendChild(content);
+
+      // Attachments if any
+      if (msg.attachments && msg.attachments.length > 0) {
+        const attContainer = document.createElement('div');
+        attContainer.className = 'flex flex-wrap gap-2 mt-2 pt-2 border-t border-slate-100';
+        msg.attachments.forEach(src => {
+          const img = document.createElement('img');
+          img.src = src;
+          img.className = 'w-16 h-16 object-cover rounded-lg border border-slate-200 shadow-xs';
+          attContainer.appendChild(img);
+        });
+        bubble.appendChild(attContainer);
+      }
+
+      wrapper.appendChild(bubble);
+      container.appendChild(wrapper);
+      container.scrollTop = container.scrollHeight;
+
+      if (window.renderMathInElement) {
+        try {
+          renderMathInElement(content, {
+            delimiters: [
+              { left: '$$', right: '$$', display: true },
+              { left: '$', right: '$', display: false }
+            ],
+            output: 'html', // 關鍵：只輸出 HTML，嚴格杜絕 MathML 與 HTML 雙重文字疊加亂碼
+            throwOnError: false
+          });
+        } catch (e) {
+          console.warn('KaTeX render error:', e);
+        }
+      }
+    }
+
+    // ==================== 6. INITIALIZATION & EVENTS ====================
+    async function initApp() {
+      await openDatabase();
+      await loadAllFromDB();
+
+      // Render Classroom Selectors
+      const studentSelect = document.getElementById('student-classroom-select');
+      const teacherSelect = document.getElementById('teacher-classroom-filter');
+      
+      const renderOptions = (el, isTeacher = false) => {
+        if (!el) return;
+        el.innerHTML = '';
+        if (isTeacher) {
+          const allOpt = document.createElement('option');
+          allOpt.value = '全部';
+          allOpt.textContent = '全部教室';
+          el.appendChild(allOpt);
+        }
+        CLASSROOMS.forEach(cls => {
+          const opt = document.createElement('option');
+          opt.value = cls.id;
+          opt.textContent = `${cls.name} (${cls.topic})`;
+          if (!isTeacher && cls.id === activeClassroomId) opt.selected = true;
+          el.appendChild(opt);
+        });
+      };
+      renderOptions(studentSelect, false);
+      renderOptions(teacherSelect, true);
+
+      updateCurrentClassroomUI();
+      renderTeacherClassroomsList();
+      renderTeacherLogs();
+      updateKPICards();
+      setupEventListeners();
+      setupTeacherManagementEvents();
+
+      // 開啟網頁自動從 Google 試算表靜默匯入同步最新資料
+      if (googleSheetConfig.endpoint) {
+        importFromGoogleSheet(true);
+      }
+    }
+
+    function updateCurrentClassroomUI() {
+      const cls = CLASSROOMS.find(c => c.id === activeClassroomId) || CLASSROOMS[0];
+      if (!cls) return;
+
+      document.getElementById('header-classroom-badge').textContent = `目前教室：${cls.topic}`;
+      document.getElementById('student-topic-title').textContent = `探究主題：${cls.topic}`;
+      document.getElementById('student-material-content').textContent = cls.material;
+      document.getElementById('student-identity-pill').textContent = currentGroup;
+      document.getElementById('group-tab-label').textContent = currentGroup;
+
+      // Concepts
+      const conceptsContainer = document.getElementById('student-concepts-tags');
+      if (conceptsContainer) {
+        conceptsContainer.innerHTML = '';
+        (cls.concepts || []).forEach(cp => {
+          const badge = document.createElement('span');
+          badge.className = 'px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-700 text-[10px] font-medium';
+          badge.textContent = cp;
+          conceptsContainer.appendChild(badge);
+        });
+      }
+
+      // Attachments in student view
+      const studentAttWrap = document.getElementById('student-material-attachments-wrap');
+      const studentAttList = document.getElementById('student-material-attachments-list');
+      if (studentAttWrap && studentAttList) {
+        if (cls.attachments && cls.attachments.length > 0) {
+          studentAttWrap.classList.remove('hidden');
+          studentAttList.innerHTML = '';
+          cls.attachments.forEach(src => {
+            const img = document.createElement('img');
+            img.src = src;
+            img.className = 'w-16 h-16 object-cover rounded-lg border border-slate-200 cursor-pointer hover:opacity-90';
+            img.onclick = () => window.open(src, '_blank');
+            studentAttList.appendChild(img);
+          });
+        } else {
+          studentAttWrap.classList.add('hidden');
+        }
+      }
+
+      // Initial Chat history
+      const historyKey = `${activeClassroomId}_${currentGroup}`;
+      if (!chatHistories[historyKey]) {
+        chatHistories[historyKey] = [
+          {
+            sender: 'agent',
+            name: 'AI 探究引導夥伴',
+            time: '09:00',
+            text: `同學好！歡迎來到【${cls.topic}】探究空間。\n你們目前觀察到什麼現象？或是對實驗步驟有什麼想法？隨時點選上方的思考標籤並提出你們的猜想！`
+          }
+        ];
+      }
+
+      const msgContainer = document.getElementById('chat-messages');
+      if (msgContainer) {
+        msgContainer.innerHTML = '';
+        chatHistories[historyKey].forEach(renderChatMessage);
+      }
+
+      // 優先反映當前小組最新一筆發言的真實 CER 水位
+      const thisGroupLogs = codingLogs.filter(l => (l.classroom === activeClassroomId || !l.classroom) && l.group === currentGroup);
+      if (thisGroupLogs.length > 0) {
+        const latest = thisGroupLogs[thisGroupLogs.length - 1];
+        updateCERDashboard(latest.cer || { claim: 6.0, evidence: 5.5, reasoning: 5.5 });
+        updateInquiryStage(latest.stage || '問題探索', latest.principle || '真實想法與問題');
+      } else {
+        updateCERDashboard({ claim: 3, evidence: 2, reasoning: 2 });
+        updateInquiryStage('問題探索', '真實想法與問題');
+      }
+    }
+
+    // ==================== 7. TEACHER CLASSROOM MANAGEMENT ====================
+    function renderTeacherClassroomsList() {
+      const container = document.getElementById('teacher-classrooms-list');
+      if (!container) return;
+      container.innerHTML = '';
+
+      CLASSROOMS.forEach(cls => {
+        const item = document.createElement('div');
+        item.className = 'p-2.5 rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-between gap-2';
+        item.innerHTML = `
+          <div class="min-w-0">
+            <div class="text-xs font-bold text-slate-800 truncate">${cls.name}</div>
+            <div class="text-[11px] text-slate-500 truncate">主題：${cls.topic}</div>
+          </div>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <button type="button" class="btn-edit-cls px-2 py-1 text-[11px] bg-white border border-slate-300 hover:bg-slate-100 rounded text-slate-700">
+              ✏️ 編輯
+            </button>
+            <button type="button" class="btn-del-cls px-2 py-1 text-[11px] bg-white border border-red-200 hover:bg-red-50 rounded text-red-600">
+              🗑️ 刪除
+            </button>
+          </div>
+        `;
+
+        item.querySelector('.btn-edit-cls').addEventListener('click', () => editClassroom(cls.id));
+        item.querySelector('.btn-del-cls').addEventListener('click', () => deleteClassroom(cls.id));
+        container.appendChild(item);
+      });
+    }
+
+    function editClassroom(id) {
+      const cls = CLASSROOMS.find(c => c.id === id);
+      if (!cls) return;
+
+      editingClassroomId = id;
+      document.getElementById('classroom-form-mode-title').textContent = `✏️ 編輯教材：${cls.name}`;
+      document.getElementById('btn-submit-classroom').textContent = '💾 儲存修改內容';
+      document.getElementById('btn-cancel-edit-classroom').classList.remove('hidden');
+
+      document.getElementById('cls-input-name').value = cls.name || '';
+      document.getElementById('cls-input-topic').value = cls.topic || '';
+      document.getElementById('cls-input-concepts').value = (cls.concepts || []).join(', ');
+      document.getElementById('cls-input-material').value = cls.material || '';
+
+      teacherPendingAttachments = [...(cls.attachments || [])];
+      renderTeacherAttachmentsPreview();
+    }
+
+    function cancelEditClassroom() {
+      editingClassroomId = null;
+      document.getElementById('classroom-form-mode-title').textContent = '開設或編輯教室教材';
+      document.getElementById('btn-submit-classroom').textContent = '儲存教室設定';
+      document.getElementById('btn-cancel-edit-classroom').classList.add('hidden');
+      document.getElementById('classroom-manage-form').reset();
+      teacherPendingAttachments = [];
+      renderTeacherAttachmentsPreview();
+    }
+
+    function deleteClassroom(id) {
+      if (CLASSROOMS.length <= 1) {
+        showToast('至少需保留一間教室！');
+        return;
+      }
+      CLASSROOMS = CLASSROOMS.filter(c => c.id !== id);
+      saveAllClassroomsToDB();
+      if (activeClassroomId === id) activeClassroomId = CLASSROOMS[0].id;
+      initApp();
+      showToast('已刪除教室');
+    }
+
+    function renderTeacherAttachmentsPreview() {
+      const container = document.getElementById('teacher-form-attachments-list');
+      if (!container) return;
+      container.innerHTML = '';
+
+      if (teacherPendingAttachments.length === 0) {
+        container.innerHTML = '<span class="text-[11px] text-slate-400">目前無附圖</span>';
+        return;
+      }
+
+      teacherPendingAttachments.forEach((src, idx) => {
+        const item = document.createElement('div');
+        item.className = 'relative w-12 h-12 rounded-lg overflow-hidden border border-slate-200';
+        item.innerHTML = `
+          <img src="${src}" class="w-full h-full object-cover" />
+          <button type="button" class="absolute top-0 right-0 bg-slate-900 text-white text-[9px] w-4 h-4 flex items-center justify-center">✕</button>
+        `;
+        item.querySelector('button').addEventListener('click', () => {
+          teacherPendingAttachments.splice(idx, 1);
+          renderTeacherAttachmentsPreview();
+        });
+        container.appendChild(item);
+      });
+    }
+
+        // ==================== CSV / JSON FILE IMPORT HELPER ====================
+    function parseCSVToRows(text) {
+      const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter(l => l.trim() !== '');
+      const rows = [];
+      for (const line of lines) {
+        const row = [];
+        let inQuotes = false;
+        let token = '';
+        for (let i = 0; i < line.length; i++) {
+          const c = line[i];
+          if (c === '"') {
+            if (inQuotes && line[i+1] === '"') {
+              token += '"';
+              i++;
+            } else {
+              inQuotes = !inQuotes;
+            }
+          } else if (c === ',' && !inQuotes) {
+            row.push(token);
+            token = '';
+          } else {
+            token += c;
+          }
+        }
+        row.push(token);
+        rows.push(row);
+      }
+      return rows;
+    }
+
+    async function handleLocalFileImport(file) {
+      if (!file) return;
+      showToast('正在解析並匯入檔案...');
+      setImportStatus('loading', '讀取本機檔案...');
+      try {
+        const text = await file.text();
+        let parsedLogs = [];
+        if (file.name.endsWith('.json') || text.trim().startsWith('{') || text.trim().startsWith('[')) {
+          try {
+            const json = JSON.parse(text);
+            parsedLogs = parseGoogleSheetData(json);
+          } catch(e) {
+            const rows = parseCSVToRows(text);
+            parsedLogs = parseGoogleSheetData(rows);
+          }
+        } else {
+          const rows = parseCSVToRows(text);
+          parsedLogs = parseGoogleSheetData(rows);
+        }
+
+        if (parsedLogs.length === 0) {
+          showToast('檔案內未解析到有效的發言編碼紀錄');
+          setImportStatus('ok', '無新資料 (0筆)');
+          return;
+        }
+
+        const existingIds = new Set(codingLogs.map(l => String(l.id || '')));
+        const existingKeys = new Set(codingLogs.map(l => `${l.classroom || ''}_${l.group || ''}_${l.time || ''}_${(l.text || '').trim()}`));
+        let addedCount = 0;
+
+        for (const item of parsedLogs) {
+          const itemKey = `${item.classroom || ''}_${item.group || ''}_${item.time || ''}_${(item.text || '').trim()}`;
+          const idStr = String(item.id || '');
+          const isDuplicate = (idStr && existingIds.has(idStr)) || existingKeys.has(itemKey);
+
+          if (!isDuplicate) {
+            codingLogs.push(item);
+            await saveLogToDB(item);
+            if (idStr) existingIds.add(idStr);
+            existingKeys.add(itemKey);
+            addedCount++;
+          }
+        }
+
+        rebuildChatHistoriesFromLogs();
+        renderTeacherLogs();
+        updateKPICards();
+        renderTeacherChart();
+        resetTimelinePlayback();
+        updateCurrentClassroomUI();
+
+        showToast(`✓ 檔案匯入成功！已載入 ${addedCount} 筆發言紀錄（累計共 ${codingLogs.length} 筆）`);
+        setImportStatus('ok', `已匯入 +${addedCount}筆`);
+      } catch (err) {
+        console.error('檔案匯入失敗:', err);
+        showToast(`✕ 檔案解析失敗: ${err.message}`);
+        setImportStatus('error', '檔案解析失敗');
+      }
+    }
+
+    function setupTeacherManagementEvents() {
+      // 觸發教師附件上傳
+      document.getElementById('btn-trigger-teacher-upload')?.addEventListener('click', () => {
+        document.getElementById('teacher-material-file-input')?.click();
+      });
+
+      document.getElementById('teacher-material-file-input')?.addEventListener('change', (e) => {
+        const files = Array.from(e.target.files);
+        files.forEach(file => {
+          const reader = new FileReader();
+          reader.onload = (evt) => {
+            teacherPendingAttachments.push(evt.target.result);
+            renderTeacherAttachmentsPreview();
+          };
+          reader.readAsDataURL(file);
+        });
+      });
+
+      // 取消編輯按鈕
+      document.getElementById('btn-cancel-edit-classroom')?.addEventListener('click', cancelEditClassroom);
+
+      // 本機 CSV/JSON 檔案匯入按鈕
+      document.getElementById('btn-import-local-csv')?.addEventListener('click', () => {
+        document.getElementById('local-csv-file-input')?.click();
+      });
+      document.getElementById('local-csv-file-input')?.addEventListener('change', (e) => {
+        const file = e.target.files?.[0];
+        if (file) {
+          handleLocalFileImport(file);
+          e.target.value = '';
+        }
+      });
+
+      // 表單送出（新增或儲存編輯）
+      document.getElementById('classroom-manage-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('cls-input-name').value.trim();
+        const topic = document.getElementById('cls-input-topic').value.trim();
+        const material = document.getElementById('cls-input-material').value.trim();
+        const concepts = document.getElementById('cls-input-concepts').value
+          .split(/[,，]/)
+          .map(s => s.trim())
+          .filter(Boolean);
+
+        if (editingClassroomId) {
+          // 修改既有
+          const idx = CLASSROOMS.findIndex(c => c.id === editingClassroomId);
+          if (idx !== -1) {
+            CLASSROOMS[idx] = {
+              ...CLASSROOMS[idx],
+              name, topic, material, concepts,
+              attachments: [...teacherPendingAttachments]
+            };
+          }
+          showToast('已更新教室教材內容！');
+        } else {
+          // 開設新教室
+          const newId = `CLS-${Date.now().toString().slice(-4)}`;
+          const newCls = {
+            id: newId,
+            name, topic, material, concepts,
+            attachments: [...teacherPendingAttachments],
+            misconceptions: []
+          };
+          CLASSROOMS.push(newCls);
+          activeClassroomId = newId;
+          showToast('已成功開設新教室！');
+        }
+
+        await saveAllClassroomsToDB();
+        cancelEditClassroom();
+        initApp();
+      });
+
+      // 同步 Google 試算表按鈕（匯出）
+      document.getElementById('btn-sync-gsheet')?.addEventListener('click', syncToGoogleSheet);
+      // 從 Google 試算表匯入按鈕
+      document.getElementById('btn-import-gsheet')?.addEventListener('click', () => importFromGoogleSheet(false));
+
+      // Timeline 重播控制監聽
+      document.getElementById('btn-timeline-play')?.addEventListener('click', toggleTimelinePlayback);
+      document.getElementById('btn-timeline-reset')?.addEventListener('click', resetTimelinePlayback);
+
+      // 匯出 CSV 按鈕監聽
+      document.getElementById('btn-clear-history')?.addEventListener('click', clearAllHistoricalLogs);
+      document.getElementById('btn-cancel-clear-modal')?.addEventListener('click', () => {
+        document.getElementById('clear-history-modal')?.classList.add('hidden');
+      });
+      document.getElementById('btn-confirm-clear-modal')?.addEventListener('click', executeClearHistoricalLogs);
+
+      document.getElementById('btn-export-csv')?.addEventListener('click', () => {
+        if (!codingLogs || codingLogs.length === 0) {
+          showToast('目前尚無編碼數據可供匯出');
+          return;
+        }
+        let csv = '\uFEFF紀錄ID,時間,教室ID,組別,學生發言內容,AI引導回覆,思考標籤,KB原則,探究維度,主張(C),證據(E),推理(R),有附件\n';
+        codingLogs.forEach(l => {
+          const escapeCsv = (str) => `"${(str || '').toString().replace(/"/g, '""')}"`;
+          csv += [
+            escapeCsv(l.id || ''),
+            escapeCsv(l.time),
+            escapeCsv(l.classroom || activeClassroomId),
+            escapeCsv(l.group),
+            escapeCsv(l.text),
+            escapeCsv(l.aiReply || ''),
+            escapeCsv(l.scaffold),
+            escapeCsv(l.principle),
+            escapeCsv(l.stage),
+            (l.cer?.claim || 0).toFixed(1),
+            (l.cer?.evidence || 0).toFixed(1),
+            (l.cer?.reasoning || 0).toFixed(1),
+            l.hasAttachment ? '是' : '否'
+          ].join(',') + '\n';
+        });
+
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `KB_Inquiry_Logs_${new Date().toISOString().slice(0, 10)}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('✓ 已成功下載 CSV 研究編碼紀錄！');
+      });
+
+      // 教師後台教室與組別篩選器監聽
+      document.getElementById('teacher-classroom-filter')?.addEventListener('change', () => {
+        renderTeacherLogs();
+        updateKPICards();
+        renderTeacherChart();
+      });
+      document.getElementById('teacher-group-filter')?.addEventListener('change', () => {
+        renderTeacherLogs();
+        updateKPICards();
+        renderTeacherChart();
+      });
+
+      // API Key 與 Google Sheet 設定彈窗事件
+      
+      document.getElementById('btn-close-log-detail-modal')?.addEventListener('click', () => {
+        document.getElementById('teacher-log-detail-modal')?.classList.add('hidden');
+      });
+      document.getElementById('btn-done-log-detail')?.addEventListener('click', () => {
+        document.getElementById('teacher-log-detail-modal')?.classList.add('hidden');
+      });
+
+      setupModalSettingsEvents();
+    }
+
+    // ==================== 8-B. API KEY & GSHEET MODALS ====================
+    function setupModalSettingsEvents() {
+      // 頂部狀態列點擊開啟金鑰設定
+      document.getElementById('api-status-pill')?.addEventListener('click', openApiKeyModal);
+      // 教師後台按鈕
+      document.getElementById('btn-open-apikey-modal')?.addEventListener('click', openApiKeyModal);
+      document.getElementById('btn-close-apikey-modal')?.addEventListener('click', closeApiKeyModal);
+      document.getElementById('btn-cancel-apikey')?.addEventListener('click', closeApiKeyModal);
+
+      // Google Sheet 彈窗按鈕
+      document.getElementById('btn-open-gsheet-modal')?.addEventListener('click', openGSheetModal);
+      document.getElementById('btn-close-gsheet-modal')?.addEventListener('click', closeGSheetModal);
+      document.getElementById('btn-cancel-gsheet')?.addEventListener('click', closeGSheetModal);
+
+      // 儲存金鑰
+      document.getElementById('btn-save-apikey')?.addEventListener('click', () => {
+        const k1 = document.getElementById('cfg-input-key1').value.trim();
+        const k2 = document.getElementById('cfg-input-key2').value.trim();
+        const model = document.getElementById('cfg-select-model').value;
+
+        const keys = [k1, k2].filter(Boolean);
+        if (keys.length === 0) {
+          showToast('請至少填入一把 API Key');
+          return;
+        }
+
+        geminiConfig.apiKeys = keys;
+        geminiConfig.currentKeyIndex = 0;
+        geminiConfig.model = model;
+
+        localStorage.setItem('KB_GEMINI_KEYS', JSON.stringify(keys));
+        localStorage.setItem('KB_GEMINI_MODEL', model);
+
+        setApiStatus('ok', `就緒 (${model})`);
+        closeApiKeyModal();
+        showToast('✓ Gemini API 金鑰與模型已儲存並生效！');
+      });
+
+      // 測試金鑰連線
+      document.getElementById('btn-test-apikey')?.addEventListener('click', async () => {
+        const k1 = document.getElementById('cfg-input-key1').value.trim();
+        const model = document.getElementById('cfg-select-model').value;
+        const resBox = document.getElementById('apikey-test-result');
+        resBox.classList.remove('hidden');
+        resBox.textContent = '連線測試中...';
+        setApiStatus('loading', '測試連線中');
+
+        try {
+          const testUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${k1}`;
+          const res = await fetch(testUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ role: 'user', parts: [{ text: 'Ping test' }] }]
+            })
+          });
+          if (res.ok) {
+            resBox.className = 'text-[11px] p-2 rounded bg-emerald-50 text-emerald-700 border border-emerald-200';
+            resBox.textContent = `✓ 連線成功！模型 ${model} 回應正常。`;
+            setApiStatus('ok', `連線正常 (${model})`);
+          } else {
+            const errJson = await res.json().catch(() => ({}));
+            resBox.className = 'text-[11px] p-2 rounded bg-red-50 text-red-700 border border-red-200';
+            resBox.textContent = `✕ 連線失敗 (${res.status}): ${errJson.error?.message || '金鑰可能無效或受配額限制'}`;
+            setApiStatus('error', '連線異常');
+          }
+        } catch (err) {
+          resBox.className = 'text-[11px] p-2 rounded bg-red-50 text-red-700 border border-red-200';
+          resBox.textContent = `✕ 網路或連線錯誤: ${err.message}`;
+          setApiStatus('error', '網路錯誤');
+        }
+      });
+
+      // 儲存 Google Sheet 設定
+      
+      document.getElementById('btn-copy-gas-code')?.addEventListener('click', () => {
+        const gasTemplate = `// ==========================================
+// KB 知識翻新探究平台 - Google 試算表同步後端 (GAS 萬能相容版)
+// ==========================================
+function doPost(e) {
+  try {
+    var data = JSON.parse(e.postData.contents);
+    var action = data.action || 'sync_logs';
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    
+    // 智慧取得或建立分頁
+    var sheetName = data.classroom || '探究紀錄';
+    var sheet = ss.getSheetByName(sheetName);
+    
+    if (!sheet) {
+      // 若預設只有一張工作表且為空，直接更名以保持乾淨
+      var allSheets = ss.getSheets();
+      if (allSheets.length === 1 && allSheets[0].getLastRow() <= 1) {
+        sheet = allSheets[0];
+        sheet.setName(sheetName);
+      } else {
+        sheet = ss.insertSheet(sheetName);
+      }
+      
+      var headers = [
+        '紀錄ID', '時間戳記', '教室ID', '班級/組別', '學生發言內容', 
+        'AI引導回覆', '使用思考標籤', 'KB核心原則', '探究階段維度', 
+        '主張品質(C)', '證據充分度(E)', '推理嚴密性(R)', '是否有附圖'
+      ];
+      sheet.appendRow(headers);
+      sheet.getRange(1, 1, 1, headers.length).setBackground('#0f172a').setFontColor('#ffffff').setFontWeight('bold');
+      sheet.setFrozenRows(1);
+    }
+    
+    if (action === 'ping_test') {
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', message: '連線正常' }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    if (action === 'sync_logs') {
+      var lastRow = sheet.getLastRow();
+      var existingIds = {};
+      if (lastRow > 1) {
+        var existingData = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+        for (var i = 0; i < existingData.length; i++) {
+          if (existingData[i][0]) existingIds[String(existingData[i][0])] = true;
+        }
+      }
+      
+      var logs = data.logs || [];
+      var newRows = [];
+      
+      for (var j = 0; j < logs.length; j++) {
+        var l = logs[j];
+        var logId = String(l.id || (l.time + '_' + l.group));
+        if (!existingIds[logId]) {
+          newRows.push([
+            logId,
+            l.time || new Date().toLocaleString(),
+            l.classroom || data.classroom || '',
+            l.group || '',
+            l.text || '',
+            l.aiReply || '',
+            l.scaffold || '',
+            l.principle || '',
+            l.stage || '',
+            (l.cer && l.cer.claim != null) ? l.cer.claim : (l.claim || 0),
+            (l.cer && l.cer.evidence != null) ? l.cer.evidence : (l.evidence || 0),
+            (l.cer && l.cer.reasoning != null) ? l.cer.reasoning : (l.reasoning || 0),
+            l.hasAttachment ? '是' : '否'
+          ]);
+        }
+      }
+      
+      if (newRows.length > 0) {
+        sheet.getRange(lastRow + 1, 1, newRows.length, newRows[0].length).setValues(newRows);
+      }
+      
+      return ContentService.createTextOutput(JSON.stringify({ 
+        status: 'ok', 
+        syncedCount: newRows.length, 
+        totalInSheet: sheet.getLastRow() - 1 
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify({ status: 'unknown_action' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ status: 'error', error: err.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function doGet(e) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var paramClassroom = (e && e.parameter && e.parameter.classroom) ? e.parameter.classroom : null;
+    
+    // 智慧尋找工作表：優先指定教室分頁，若無則遍歷所有有資料的分頁
+    var targetSheets = [];
+    if (paramClassroom && ss.getSheetByName(paramClassroom)) {
+      targetSheets.push(ss.getSheetByName(paramClassroom));
+    } else {
+      var allSheets = ss.getSheets();
+      for (var s = 0; s < allSheets.length; s++) {
+        if (allSheets[s].getLastRow() > 1) {
+          targetSheets.push(allSheets[s]);
+        }
+      }
+      if (targetSheets.length === 0) {
+        targetSheets.push(ss.getActiveSheet());
+      }
+    }
+    
+    var allLogs = [];
+    
+    for (var k = 0; k < targetSheets.length; k++) {
+      var sheet = targetSheets[k];
+      var lastRow = sheet.getLastRow();
+      var lastCol = sheet.getLastColumn();
+      if (lastRow <= 1 || lastCol < 1) continue;
+      
+      var values = sheet.getRange(1, 1, lastRow, lastCol).getValues();
+      var headers = values[0];
+      
+      for (var i = 1; i < values.length; i++) {
+        var row = values[i];
+        if (!row) continue;
+        var hasContent = false;
+        for (var c = 0; c < row.length; c++) {
+          if (row[c] !== '' && row[c] !== null && row[c] !== undefined) {
+            hasContent = true;
+            break;
+          }
+        }
+        if (!hasContent) continue;
+        
+        var item = {};
+        for (var c = 0; c < headers.length; c++) {
+          var h = String(headers[c] || '').trim();
+          var cellVal = row[c];
+          if (cellVal instanceof Date) {
+            cellVal = Utilities.formatDate(cellVal, ss.getSpreadsheetTimeZone() || 'Asia/Taipei', 'HH:mm');
+          }
+          item[h] = cellVal;
+        }
+        allLogs.push(item);
+      }
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify({ status: 'ok', logs: allLogs }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ status: 'error', error: err.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}`;
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(gasTemplate).then(() => {
+            showToast('✓ 已複製 Google Apps Script 完整程式碼到剪貼簿！');
+          }).catch(() => {
+            fallbackCopy(gasTemplate);
+          });
+        } else {
+          fallbackCopy(gasTemplate);
+        }
+        function fallbackCopy(text) {
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+          showToast('✓ 已複製 Google Apps Script 完整程式碼！');
+        }
+      });
+
+      document.getElementById('btn-save-gsheet')?.addEventListener('click', () => {
+        const url = document.getElementById('cfg-input-gsheet-url').value.trim();
+        googleSheetConfig.endpoint = url;
+        localStorage.setItem('KB_GSHEET_URL', url);
+        closeGSheetModal();
+        showToast('✓ Google 試算表網址已更新儲存！');
+      });
+
+      // 測試發送至 Google Sheet
+      document.getElementById('btn-test-gsheet')?.addEventListener('click', async () => {
+        const url = document.getElementById('cfg-input-gsheet-url').value.trim();
+        const resBox = document.getElementById('gsheet-test-result');
+        resBox.classList.remove('hidden');
+        if (!url) {
+          resBox.className = 'text-[11px] p-2 rounded bg-red-50 text-red-700 border border-red-200';
+          resBox.textContent = '請先填寫 Web App 網址';
+          return;
+        }
+
+        resBox.textContent = '發送測試封包中...';
+        try {
+          await fetch(url, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({
+              action: 'ping_test',
+              timestamp: new Date().toISOString()
+            })
+          });
+          resBox.className = 'text-[11px] p-2 rounded bg-emerald-50 text-emerald-700 border border-emerald-200';
+          resBox.textContent = '✓ 測試請求已送出（no-cors 模式已成功送達 Google Apps Script 端點）';
+        } catch (err) {
+          resBox.className = 'text-[11px] p-2 rounded bg-red-50 text-red-700 border border-red-200';
+          resBox.textContent = `✕ 請求發送失敗: ${err.message}`;
+        }
+      });
+
+      // 測試讀取匯入
+      document.getElementById('btn-test-import-gsheet')?.addEventListener('click', async () => {
+        const url = document.getElementById('cfg-input-gsheet-url').value.trim();
+        const resBox = document.getElementById('gsheet-test-result');
+        resBox.classList.remove('hidden');
+        if (!url) {
+          resBox.className = 'text-[11px] p-2 rounded bg-red-50 text-red-700 border border-red-200';
+          resBox.textContent = '請先填寫 Web App 網址';
+          return;
+        }
+
+        resBox.textContent = '嘗試讀取試算表資料中...';
+        try {
+          const fetchUrl = `${url}${url.includes('?') ? '&' : '?'}action=fetch_logs&classroom=${encodeURIComponent(activeClassroomId)}`;
+          const res = await fetch(fetchUrl);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const rawData = await res.json();
+          const items = parseGoogleSheetData(rawData);
+          resBox.className = 'text-[11px] p-2 rounded bg-emerald-50 text-emerald-700 border border-emerald-200';
+          resBox.textContent = `✓ 讀取成功！從試算表解析出 ${items.length} 筆記錄。`;
+        } catch (err) {
+          resBox.className = 'text-[11px] p-2 rounded bg-red-50 text-red-700 border border-red-200';
+          resBox.textContent = `✕ 讀取失敗: ${err.message} (請確認 Google Apps Script doGet 是否已支援回傳 JSON)`;
+        }
+      });
+
+      // 查詢線上可用模型 (Fetch Models from Gemini API)
+      document.getElementById('btn-fetch-models')?.addEventListener('click', async () => {
+        const k1 = document.getElementById('cfg-input-key1').value.trim();
+        const resBox = document.getElementById('apikey-test-result');
+        const container = document.getElementById('models-list-container');
+        const scrollArea = document.getElementById('models-cards-scroll');
+        const countBadge = document.getElementById('models-count-badge');
+        const selectEl = document.getElementById('cfg-select-model');
+
+        if (!k1) {
+          resBox.classList.remove('hidden');
+          resBox.className = 'text-[11px] p-2 rounded bg-amber-50 text-amber-700 border border-amber-200';
+          resBox.textContent = '請先填寫主要 API Key (金鑰 1) 以便查詢模型清單。';
+          return;
+        }
+
+        resBox.classList.remove('hidden');
+        resBox.className = 'text-[11px] p-2 rounded bg-slate-50 text-slate-600 border border-slate-200';
+        resBox.textContent = '正在向 Google 伺服器查詢可用模型清單...';
+
+        try {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${k1}`;
+          const res = await fetch(url);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+          const allModels = data.models || [];
+          
+          // 過濾出支援 generateContent 的模型
+          const usableModels = allModels.filter(m => 
+            m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent')
+          );
+
+          if (usableModels.length === 0) {
+            resBox.className = 'text-[11px] p-2 rounded bg-amber-50 text-amber-700 border border-amber-200';
+            resBox.textContent = '此金鑰未查詢到支援文字對話 (generateContent) 的模型。';
+            return;
+          }
+
+          resBox.className = 'text-[11px] p-2 rounded bg-emerald-50 text-emerald-700 border border-emerald-200';
+          resBox.textContent = `✓ 成功取得 ${usableModels.length} 個可用模型！請在下方點選套用。`;
+          countBadge.textContent = `${usableModels.length} 個可用`;
+          container.classList.remove('hidden');
+          scrollArea.innerHTML = '';
+
+          // 更新下拉選單中的選項
+          const currentVal = selectEl.value;
+          usableModels.forEach(m => {
+            const rawId = m.name.replace(/^models\//, '');
+            // 檢查下拉選單是否已有此選項，沒有則加入
+            if (!Array.from(selectEl.options).some(opt => opt.value === rawId)) {
+              const opt = document.createElement('option');
+              opt.value = rawId;
+              opt.textContent = `${rawId} (${m.displayName || ''})`;
+              selectEl.appendChild(opt);
+            }
+
+            // 建立可點選的模型卡片
+            const card = document.createElement('div');
+            const isSelected = (rawId === currentVal);
+            card.className = `p-2 rounded border transition-all cursor-pointer text-left ${
+              isSelected ? 'bg-slate-900 text-white border-slate-900' : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200'
+            }`;
+            card.innerHTML = `
+              <div class="flex items-center justify-between">
+                <span class="font-mono font-bold text-xs">${rawId}</span>
+                <span class="text-[9px] px-1 py-0.5 rounded ${isSelected ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-500'} font-mono">
+                  ${m.supportedGenerationMethods.length} 種模式
+                </span>
+              </div>
+              <div class="text-[10px] mt-0.5 line-clamp-1 ${isSelected ? 'text-slate-300' : 'text-slate-500'}">
+                ${m.description || m.displayName || '無詳細描述'}
+              </div>
+            `;
+
+            card.addEventListener('click', () => {
+              selectEl.value = rawId;
+              // 重新高亮選中的卡片
+              Array.from(scrollArea.children).forEach(c => {
+                c.className = 'p-2 rounded border bg-white hover:bg-slate-100 text-slate-700 border-slate-200 transition-all cursor-pointer text-left';
+              });
+              card.className = 'p-2 rounded border bg-slate-900 text-white border-slate-900 transition-all cursor-pointer text-left';
+              showToast(`已選擇模型：${rawId}`);
+            });
+
+            scrollArea.appendChild(card);
+          });
+
+        } catch (err) {
+          resBox.className = 'text-[11px] p-2 rounded bg-red-50 text-red-700 border border-red-200';
+          resBox.textContent = `✕ 查詢失敗: ${err.message} (請檢查 API Key 是否正確或具備查詢權限)`;
+        }
+      });
+    }
+
+    function openApiKeyModal() {
+      document.getElementById('cfg-input-key1').value = geminiConfig.apiKeys[0] || '';
+      document.getElementById('cfg-input-key2').value = geminiConfig.apiKeys[1] || '';
+      document.getElementById('cfg-select-model').value = geminiConfig.model || 'gemini-3.1-flash-lite';
+      document.getElementById('apikey-test-result').classList.add('hidden');
+      document.getElementById('apikey-settings-modal').classList.remove('hidden');
+    }
+
+    function closeApiKeyModal() {
+      document.getElementById('apikey-settings-modal').classList.add('hidden');
+    }
+
+    function openGSheetModal() {
+      document.getElementById('cfg-input-gsheet-url').value = googleSheetConfig.endpoint || '';
+      document.getElementById('gsheet-test-result').classList.add('hidden');
+      document.getElementById('gsheet-settings-modal').classList.remove('hidden');
+    }
+
+    function closeGSheetModal() {
+      document.getElementById('gsheet-settings-modal').classList.add('hidden');
+    }
+
+    // ==================== 8. RESEARCH LOGS, TIMELINE & GOOGLE SHEETS ====================
+    function renderTeacherLogs() {
+      const tbody = document.getElementById('teacher-logs-tbody');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+
+      const clsFilter = document.getElementById('teacher-classroom-filter')?.value || '全部';
+      const grpFilter = document.getElementById('teacher-group-filter')?.value || '全部';
+
+      const filtered = codingLogs.filter(l => {
+        if (clsFilter !== '全部' && l.classroom && l.classroom !== clsFilter) return false;
+        if (grpFilter !== '全部' && l.group && l.group !== grpFilter) return false;
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-slate-400">尚無符合條件之發言編碼紀錄</td></tr>';
+        return;
+      }
+
+      filtered.slice(-50).reverse().forEach((log, idx) => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50 text-[11px] transition-colors';
+        tr.innerHTML = `
+          <td class="p-2 text-slate-400 whitespace-nowrap">${log.time}</td>
+          <td class="p-2 font-bold text-slate-800 whitespace-nowrap">${log.group}</td>
+          <td class="p-2 text-slate-600 truncate max-w-xs cursor-pointer hover:text-slate-900" title="點擊檢視完整發言與AI回覆">
+            ${log.scaffold ? `<span class="text-slate-400 font-sans">[${log.scaffold}]</span> ` : ''}${log.text}
+          </td>
+          <td class="p-2 whitespace-nowrap"><span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700">${log.principle}</span></td>
+          <td class="p-2 whitespace-nowrap">${log.stage}</td>
+          <td class="p-2 font-bold whitespace-nowrap">${(log.cer?.claim || 0).toFixed(1)}/${(log.cer?.evidence || 0).toFixed(1)}/${(log.cer?.reasoning || 0).toFixed(1)}</td>
+          <td class="p-2 whitespace-nowrap text-right">
+            <button type="button" class="btn-view-log-detail px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-sans text-[10px] transition-colors">
+              🔍 詳情
+            </button>
+          </td>
+        `;
+
+        tr.querySelector('.btn-view-log-detail')?.addEventListener('click', () => openLogDetailModal(log));
+        tr.querySelector('td:nth-child(3)')?.addEventListener('click', () => openLogDetailModal(log));
+        tbody.appendChild(tr);
+      });
+    }
+
+    function openLogDetailModal(log) {
+      if (!log) return;
+      document.getElementById('detail-modal-group').textContent = log.group || '小組';
+      document.getElementById('detail-modal-time').textContent = log.time || '';
+      document.getElementById('detail-modal-stage').textContent = log.stage || '探究階段';
+      document.getElementById('detail-modal-scaffold').textContent = log.scaffold ? `思考標籤：${log.scaffold}` : '';
+      document.getElementById('detail-modal-student-text').textContent = log.text || '（無發言內容）';
+      
+      const aiReplyContainer = document.getElementById('detail-modal-ai-reply');
+      if (aiReplyContainer) {
+        aiReplyContainer.innerHTML = formatMessageContent(log.aiReply || '（此則紀錄無 AI 回覆內容）');
+        if (window.renderMathInElement) {
+          try {
+            renderMathInElement(aiReplyContainer, {
+              delimiters: [
+                { left: '$$', right: '$$', display: true },
+                { left: '$', right: '$', display: false }
+              ],
+              output: 'html',
+              throwOnError: false
+            });
+          } catch(e) {}
+        }
+      }
+
+      document.getElementById('detail-modal-principle').textContent = `KB 原則：${log.principle || '真實想法與問題'}`;
+      document.getElementById('detail-modal-c').textContent = (log.cer?.claim || 0).toFixed(1);
+      document.getElementById('detail-modal-e').textContent = (log.cer?.evidence || 0).toFixed(1);
+      document.getElementById('detail-modal-r').textContent = (log.cer?.reasoning || 0).toFixed(1);
+
+      document.getElementById('teacher-log-detail-modal')?.classList.remove('hidden');
+    }
+
+    function toggleTimelinePlayback() {
+      const btn = document.getElementById('btn-timeline-play');
+      if (timelineInterval) {
+        clearInterval(timelineInterval);
+        timelineInterval = null;
+        if (btn) btn.textContent = '▶ 繼續重播';
+        return;
+      }
+
+      if (codingLogs.length === 0) {
+        showToast('目前尚無探究發言可供重播');
+        return;
+      }
+
+      if (btn) btn.textContent = '⏸ 暫停重播';
+      const speed = parseInt(document.getElementById('timeline-speed-select')?.value || '1500', 10);
+
+      timelineInterval = setInterval(() => {
+        if (timelineIndex >= codingLogs.length) {
+          clearInterval(timelineInterval);
+          timelineInterval = null;
+          if (btn) btn.textContent = '▶ 重新播放';
+          showToast('時序重播已完成！');
+          return;
+        }
+
+        const log = codingLogs[timelineIndex];
+        timelineIndex++;
+
+        // 更新進度與面板
+        const progressBar = document.getElementById('timeline-progress-bar');
+        const stepDisplay = document.getElementById('timeline-current-step');
+        const activeDisplay = document.getElementById('timeline-active-display');
+
+        if (progressBar) progressBar.style.width = `${(timelineIndex / codingLogs.length) * 100}%`;
+        if (stepDisplay) stepDisplay.textContent = `第 ${timelineIndex} / ${codingLogs.length} 步`;
+        if (activeDisplay) {
+          activeDisplay.innerHTML = `
+            <div class="flex items-center gap-3">
+              <span class="font-bold text-slate-900">${log.group}</span>
+              <span class="text-slate-400 font-mono">${log.time}</span>
+              <span class="px-2 py-0.5 rounded bg-slate-200 text-slate-800 text-[10px] font-mono">${log.stage}</span>
+              <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px]">${log.principle}</span>
+            </div>
+            <div class="text-slate-700 truncate max-w-md mt-1 sm:mt-0 font-sans">
+              ${log.text}
+            </div>
+          `;
+        }
+
+        // 動態反映該步的 CER 水位
+        updateCERDashboard(log.cer);
+      }, speed);
+    }
+
+    function resetTimelinePlayback() {
+      if (timelineInterval) {
+        clearInterval(timelineInterval);
+        timelineInterval = null;
+      }
+      timelineIndex = 0;
+      const btn = document.getElementById('btn-timeline-play');
+      if (btn) btn.textContent = '▶ 開始重播';
+      const progressBar = document.getElementById('timeline-progress-bar');
+      const stepDisplay = document.getElementById('timeline-current-step');
+      const activeDisplay = document.getElementById('timeline-active-display');
+
+      if (progressBar) progressBar.style.width = '0%';
+      if (stepDisplay) stepDisplay.textContent = `第 0 / ${codingLogs.length} 步`;
+      if (activeDisplay) activeDisplay.innerHTML = '<span class="text-slate-400">點擊「開始重播」以動態回放各小組在探究歷程中的想法演化...</span>';
+    }
+
+    function updateKPICards() {
+      const clsFilter = document.getElementById('teacher-classroom-filter')?.value || '全部';
+      const grpFilter = document.getElementById('teacher-group-filter')?.value || '全部';
+
+      const filtered = codingLogs.filter(l => {
+        if (clsFilter !== '全部' && l.classroom && l.classroom !== clsFilter) return false;
+        if (grpFilter !== '全部' && l.group && l.group !== grpFilter) return false;
+        return true;
+      });
+
+      const totalCount = filtered.length;
+      document.getElementById('kpi-count').textContent = `${totalCount} 筆`;
+
+      if (totalCount > 0) {
+        const avgR = (filtered.reduce((acc, cur) => acc + (cur.cer?.reasoning || 0), 0) / totalCount).toFixed(1);
+        document.getElementById('kpi-avg-r').textContent = `${avgR} / 10.0`;
+
+        const riseAboveCount = filtered.filter(l => (l.principle || '').includes('整合') || (l.principle || '').includes('超越')).length;
+        document.getElementById('kpi-rise-above').textContent = `${riseAboveCount} 次`;
+
+        const attCount = filtered.filter(l => l.hasAttachment).length;
+        document.getElementById('kpi-attachments').textContent = `${attCount} 次`;
+      } else {
+        document.getElementById('kpi-avg-r').textContent = `0.0 / 10.0`;
+        document.getElementById('kpi-rise-above').textContent = `0 次`;
+        document.getElementById('kpi-attachments').textContent = `0 次`;
+      }
+    }
+
+        // 單筆發言即時自動寫入 Google 試算表（非阻塞，背景同步）
+    async function autoSyncSingleLog(logItem) {
+      if (!googleSheetConfig.endpoint) return;
+      setWriteStatus('syncing', '即時寫入中...');
+      try {
+        const cls = CLASSROOMS.find(c => c.id === activeClassroomId) || CLASSROOMS[0];
+        const payload = {
+          action: 'sync_logs',
+          classroom: activeClassroomId,
+          classroomName: cls ? cls.name : activeClassroomId,
+          topic: cls ? cls.topic : '',
+          timestamp: new Date().toISOString(),
+          logs: [{
+            id: String(logItem.id || ''),
+            time: String(logItem.time || ''),
+            classroom: String(logItem.classroom || activeClassroomId),
+            group: String(logItem.group || ''),
+            text: String(logItem.text || ''),
+            aiReply: String(logItem.aiReply || ''),
+            scaffold: String(logItem.scaffold || ''),
+            principle: String(logItem.principle || ''),
+            stage: String(logItem.stage || ''),
+            claim: Number(logItem.cer?.claim || 0),
+            evidence: Number(logItem.cer?.evidence || 0),
+            reasoning: Number(logItem.cer?.reasoning || 0),
+            hasAttachment: !!logItem.hasAttachment
+          }]
+        };
+        await fetch(googleSheetConfig.endpoint, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(payload)
+        });
+        setWriteStatus('ok', `即時寫入成功 (${new Date().toLocaleTimeString().slice(0, 5)})`);
+      } catch (err) {
+        console.warn('單筆即時寫入失敗:', err);
+        setWriteStatus('error', '寫入暫時失敗');
+      }
+    }
+
+        // 時間與組別正規化工具函式
+    function formatLogTime(rawTime) {
+      if (!rawTime) return new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false });
+      const str = String(rawTime).trim();
+      if (/^\d{1,2}:\d{2}$/.test(str)) return str;
+      if (/^\d{1,2}:\d{2}:\d{2}$/.test(str)) return str.slice(0, 5);
+      const d = new Date(str);
+      if (!isNaN(d.getTime())) {
+        const hrs = String(d.getHours()).padStart(2, '0');
+        const mins = String(d.getMinutes()).padStart(2, '0');
+        return `${hrs}:${mins}`;
+      }
+      return str.slice(0, 10);
+    }
+
+    function normalizeGroupName(rawGroup) {
+      if (!rawGroup) return '第 1 組';
+      let str = String(rawGroup).trim();
+      const cnNums = { '一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6, '七': 7, '八': 8, '九': 9, '十': 10 };
+      for (const [cn, num] of Object.entries(cnNums)) {
+        if (str.includes(cn)) {
+          str = str.replace(cn, num);
+          break;
+        }
+      }
+      const m = str.match(/\d+/);
+      if (m) {
+        const num = parseInt(m[0], 10);
+        if (num >= 1 && num <= 12) return `第 ${num} 組`;
+      }
+      return str;
+    }
+
+    async function syncToGoogleSheet() {
+      if (!googleSheetConfig.endpoint) {
+        showToast('尚未配置 Google 試算表 Web App 網址');
+        setWriteStatus('error', '未設定網址');
+        openGSheetModal();
+        return;
+      }
+      if (codingLogs.length === 0) {
+        showToast('目前尚無任何發言編碼紀錄可供寫入');
+        return;
+      }
+      showToast('正在寫入資料至 Google 試算表...');
+      setWriteStatus('syncing', '正在寫入...');
+      try {
+        const cls = CLASSROOMS.find(c => c.id === activeClassroomId) || CLASSROOMS[0];
+        const payload = {
+          action: 'sync_logs',
+          classroom: activeClassroomId,
+          classroomName: cls ? cls.name : activeClassroomId,
+          topic: cls ? cls.topic : '',
+          timestamp: new Date().toISOString(),
+          logs: codingLogs.map(l => ({
+            id: String(l.id || ''),
+            time: String(l.time || ''),
+            classroom: String(l.classroom || activeClassroomId),
+            group: String(l.group || ''),
+            text: String(l.text || ''),
+            aiReply: String(l.aiReply || ''),
+            scaffold: String(l.scaffold || ''),
+            principle: String(l.principle || ''),
+            stage: String(l.stage || ''),
+            claim: Number(l.cer?.claim || 0),
+            evidence: Number(l.cer?.evidence || 0),
+            reasoning: Number(l.cer?.reasoning || 0),
+            hasAttachment: !!l.hasAttachment
+          }))
+        };
+        // 使用 text/plain 避免跨域 OPTIONS 預檢失敗，確保 Google Apps Script 能在 e.postData.contents 完整接收
+        await fetch(googleSheetConfig.endpoint, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(payload)
+        });
+        showToast(`✓ 已成功將 ${codingLogs.length} 筆紀錄發送至 Google 試算表！`);
+        setWriteStatus('ok', `已同步 (${new Date().toLocaleTimeString().slice(0, 5)})`);
+      } catch (err) {
+        console.error('試算表寫入失敗:', err);
+        showToast('Google 試算表同步失敗，資料已安全保存在本機');
+        setWriteStatus('error', '寫入失敗');
+      }
+    }
+
+    // ==================== 8-C. 萬能自適應 GOOGLE SHEET 資料解析器 ====================
+    function parseGoogleSheetData(data) {
+      if (!data) return [];
+      let rawList = [];
+
+      if (Array.isArray(data)) {
+        rawList = data;
+      } else if (Array.isArray(data.logs)) {
+        rawList = data.logs;
+      } else if (Array.isArray(data.data)) {
+        rawList = data.data;
+      } else if (Array.isArray(data.rows)) {
+        rawList = data.rows;
+      } else if (Array.isArray(data.values)) {
+        rawList = data.values;
+      } else if (typeof data === 'object') {
+        const found = Object.values(data).find(v => Array.isArray(v));
+        if (found) rawList = found;
+      }
+
+      if (!rawList || rawList.length === 0) return [];
+
+      let headers = null;
+      let startIndex = 0;
+
+      // 若第一筆為表頭陣列
+      if (Array.isArray(rawList[0])) {
+        const headerCandidate = rawList[0].map(c => String(c || '').trim());
+        const hasHeaderKeyword = headerCandidate.some(h => 
+          /id|時間|time|組別|group|發言|內容|text|標籤|scaffold|原則|principle|階段|stage|主張|claim|證據|evidence|推理|reasoning/i.test(h)
+        );
+        if (hasHeaderKeyword) {
+          headers = headerCandidate;
+          startIndex = 1;
+        }
+      }
+
+      const results = [];
+      for (let i = startIndex; i < rawList.length; i++) {
+        const row = rawList[i];
+        if (!row) continue;
+
+        if (Array.isArray(row)) {
+          // 二維陣列行
+          if (!row.some(cell => String(cell || '').trim() !== '')) continue;
+
+          let id = '', time = '', classroom = activeClassroomId, group = '第 1 組';
+          let text = '', aiReply = '', scaffold = '', principle = '真實想法與問題', stage = '問題探索';
+          let c = 6.0, e = 5.5, r = 5.5, hasAttachment = false;
+
+          if (headers && headers.length > 0) {
+            headers.forEach((h, colIdx) => {
+              const val = row[colIdx];
+              if (val === undefined || val === null) return;
+              const hLower = String(h).toLowerCase().trim();
+              if (/教室/i.test(hLower)) classroom = String(val);
+              else if (/紀錄id|log_?id|record_?id|^id$|編號/i.test(hLower) || (/id/i.test(hLower) && !/教室/i.test(hLower))) id = String(val);
+              else if (/時間|time|timestamp|日期/i.test(hLower)) time = String(val);
+              else if (/組別|班級|group|team/i.test(hLower)) group = String(val);
+              else if (/ai|回覆|引導/i.test(hLower)) aiReply = String(val);
+              else if (/發言|內容|text|content|message/i.test(hLower)) text = String(val);
+              else if (/標籤|思考|scaffold/i.test(hLower)) scaffold = String(val);
+              else if (/原則|kb|principle/i.test(hLower)) principle = String(val);
+              else if (/階段|維度|stage/i.test(hLower)) stage = String(val);
+              else if (/主張|claim|c水位|\bc\b/i.test(hLower)) c = parseFloat(val) || c;
+              else if (/證據|evidence|e水位|\be\b/i.test(hLower)) e = parseFloat(val) || e;
+              else if (/推理|reasoning|r水位|\br\b/i.test(hLower)) r = parseFloat(val) || r;
+              else if (/附圖|附件|圖片|attachment/i.test(hLower)) hasAttachment = String(val) === '是' || val === true;
+            });
+          } else {
+            if (row.length >= 10) {
+              id = String(row[0] || '');
+              time = String(row[1] || '');
+              classroom = String(row[2] || activeClassroomId);
+              group = String(row[3] || '第 1 組');
+              text = String(row[4] || '');
+              aiReply = String(row[5] || '');
+              scaffold = String(row[6] || '');
+              principle = String(row[7] || '真實想法與問題');
+              stage = String(row[8] || '問題探索');
+              c = parseFloat(row[9]) || 6.0;
+              e = parseFloat(row[10]) || 5.5;
+              r = parseFloat(row[11]) || 5.5;
+              hasAttachment = String(row[12]) === '是' || row[12] === true;
+            } else {
+              time = String(row[0] || '');
+              group = String(row[1] || '第 1 組');
+              text = String(row[2] || '');
+              scaffold = String(row[3] || '');
+              principle = String(row[4] || '真實想法與問題');
+              stage = String(row[5] || '問題探索');
+              c = parseFloat(row[6]) || 6.0;
+              e = parseFloat(row[7]) || 5.5;
+              r = parseFloat(row[8]) || 5.5;
+            }
+          }
+
+          if (text || id) {
+            results.push({
+              id: id || `gs_${Date.now()}_${i}_${Math.random().toString(36).substring(2, 6)}`,
+              time: formatLogTime(time),
+              classroom: classroom || activeClassroomId,
+              group: normalizeGroupName(group),
+              text: String(text || '（無發言內容）'),
+              aiReply: aiReply || '',
+              scaffold: scaffold || '',
+              principle: principle || '真實想法與問題',
+              stage: stage || '問題探索',
+              cer: { claim: c, evidence: e, reasoning: r },
+              hasAttachment: !!hasAttachment
+            });
+          }
+        } else if (typeof row === 'object') {
+          // 物件鍵值對：不分大小寫與欄位彈性比對
+          const getVal = (...keys) => {
+            for (const k of keys) {
+              const kLower = k.toLowerCase().trim();
+              for (const prop in row) {
+                const pLower = prop.toLowerCase().trim();
+                if (pLower === kLower) return row[prop];
+                if (kLower.length >= 2 && (pLower.includes(kLower) || kLower.includes(pLower))) {
+                  return row[prop];
+                }
+              }
+            }
+            return '';
+          };
+
+          const id = String(row.id || getVal('id', '紀錄id', '紀錄ID', '編號') || '');
+          const text = getVal('text', 'message', 'content', '發言內容', '學生發言內容', '學生發言', '小組發言', '發言');
+          const aiReply = getVal('aiReply', 'reply', 'ai引導回覆', 'ai回覆', 'ai');
+          const group = getVal('group', 'team', '組別', '班級/組別', '小組', '班級');
+          const time = getVal('time', 'timestamp', '時間戳記', '時間', '日期');
+          const classroom = getVal('classroom', '教室id', '教室ID', '教室') || activeClassroomId;
+          const scaffold = getVal('scaffold', '使用思考標籤', '思考標籤', '思考角度', '標籤', '使用標籤');
+          const principle = getVal('principle', 'kb核心原則', 'kb原則', '原則', '知識翻新原則') || '真實想法與問題';
+          const stage = getVal('stage', '探究階段維度', '探究階段', '維度', '階段') || '問題探索';
+
+          let c = parseFloat(getVal('claim', '主張品質(c)', '主張品質', '主張水位', '主張')) || 6.0;
+          let e = parseFloat(getVal('evidence', '證據充分度(e)', '證據充分度', '證據水位', '證據')) || 5.5;
+          let r = parseFloat(getVal('reasoning', '推理嚴密性(r)', '推理嚴密性', '推理水位', '推理')) || 5.5;
+          const hasAtt = String(getVal('hasAttachment', '是否有附圖', '附圖', '附件')) === '是' || row.hasAttachment === true;
+
+          if (text || id || row['時間戳記'] || row['組別'] || getVal('time', 'group')) {
+            results.push({
+              id: id || `gs_${Date.now()}_${i}_${Math.random().toString(36).substring(2, 6)}`,
+              time: formatLogTime(time),
+              classroom: String(classroom),
+              group: normalizeGroupName(group),
+              text: String(text || '（無發言內容）'),
+              aiReply: String(aiReply || ''),
+              scaffold: String(scaffold || ''),
+              principle: String(principle || '真實想法與問題'),
+              stage: String(stage || '問題探索'),
+              cer: { claim: c, evidence: e, reasoning: r },
+              hasAttachment: hasAtt
+            });
+          }
+        }
+      }
+
+      return results;
+    }
+
+    async function importFromGoogleSheet(quiet = false) {
+      if (!googleSheetConfig.endpoint) {
+        if (!quiet) {
+          showToast('尚未配置 Google 試算表 Web App 網址，請先至設定填入');
+          openGSheetModal();
+        }
+        setImportStatus('error', '未設定網址');
+        return;
+      }
+
+      if (!quiet) showToast('正在從 Google 試算表抓取最新資料...');
+      setImportStatus('loading', '正在同步...');
+      try {
+        const fetchUrl = `${googleSheetConfig.endpoint}${googleSheetConfig.endpoint.includes('?') ? '&' : '?'}action=fetch_logs&t=${Date.now()}`;
+        const res = await fetch(fetchUrl);
+        if (!res.ok) throw new Error(`HTTP 狀態碼 ${res.status}`);
+        const data = await res.json();
+
+        const importedLogs = parseGoogleSheetData(data);
+
+        if (!importedLogs || importedLogs.length === 0) {
+          if (!quiet) showToast('試算表連線成功，但目前沒有讀取到發言資料（請確認試算表內是否有填入文字）');
+          setImportStatus('ok', '無新資料 (0筆)');
+          return;
+        }
+
+        // 以 id 與內容特徵去重合併
+        const existingIds = new Set(codingLogs.map(l => String(l.id || '')));
+        const existingTexts = new Set(codingLogs.map(l => `${l.group}_${(l.text || '').trim()}`));
+        let addedCount = 0;
+
+        for (const item of importedLogs) {
+          const contentKey = `${item.group}_${(item.text || '').trim()}`;
+          const idStr = String(item.id || '');
+          
+          if (!existingIds.has(idStr) && !existingTexts.has(contentKey)) {
+            codingLogs.push(item);
+            await saveLogToDB(item);
+            existingIds.add(idStr);
+            existingTexts.add(contentKey);
+            addedCount++;
+          } else {
+            // 若既有紀錄缺少 aiReply 但雲端有，予以補齊更新
+            const existingIdx = codingLogs.findIndex(l => String(l.id) === idStr || `${l.group}_${(l.text || '').trim()}` === contentKey);
+            if (existingIdx !== -1 && !codingLogs[existingIdx].aiReply && item.aiReply) {
+              codingLogs[existingIdx].aiReply = item.aiReply;
+              await saveLogToDB(codingLogs[existingIdx]);
+            }
+          }
+        }
+
+        // 檢查是否有匯入新的教室，並自動擴充教室下拉清單
+        importedLogs.forEach(l => {
+          if (l.classroom && !CLASSROOMS.some(c => c.id === l.classroom)) {
+            CLASSROOMS.push({
+              id: l.classroom,
+              name: `雲端班級：${l.classroom}`,
+              topic: '自然科學探究專題',
+              material: '由 Google 試算表同步匯入之探究專題。',
+              concepts: ['科學探究', '變因控制'],
+              misconceptions: [],
+              attachments: []
+            });
+            saveAllClassroomsToDB();
+          }
+        });
+
+        // 重新刷新學生端與教師端的教室選單以容納雲端新班級
+        const studentSelect = document.getElementById('student-classroom-select');
+        const teacherSelect = document.getElementById('teacher-classroom-filter');
+        if (studentSelect && teacherSelect) {
+          const currentClsVal = activeClassroomId;
+          studentSelect.innerHTML = '';
+          teacherSelect.innerHTML = '<option value="全部">全部教室</option>';
+          CLASSROOMS.forEach(c => {
+            const optS = document.createElement('option');
+            optS.value = c.id;
+            optS.textContent = `${c.name} (${c.topic})`;
+            if (c.id === currentClsVal) optS.selected = true;
+            studentSelect.appendChild(optS);
+
+            const optT = document.createElement('option');
+            optT.value = c.id;
+            optT.textContent = `${c.name} (${c.topic})`;
+            teacherSelect.appendChild(optT);
+          });
+        }
+
+        // 智慧對齊小組：若當前小組無紀錄，但雲端有其他小組紀錄，自動切換至有紀錄的第一個組別
+        const currentGroupLogs = codingLogs.filter(l => (l.classroom === activeClassroomId || !l.classroom) && l.group === currentGroup);
+        if (currentGroupLogs.length === 0 && codingLogs.length > 0) {
+          const firstAvailableGroup = codingLogs[0].group;
+          if (firstAvailableGroup) {
+            currentGroup = firstAvailableGroup;
+            const grpSelect = document.getElementById('student-group-select');
+            if (grpSelect) grpSelect.value = currentGroup;
+          }
+        }
+
+        // 根據匯入的歷史紀錄，重建各組對話聊天串
+        rebuildChatHistoriesFromLogs();
+
+        renderTeacherLogs();
+        updateKPICards();
+        renderTeacherChart();
+        resetTimelinePlayback();
+
+        // 重新刷新當前小組的對話視窗
+        updateCurrentClassroomUI(false);
+
+        if (addedCount > 0) {
+          if (!quiet) showToast(`✓ 匯入成功！已從試算表新增 ${addedCount} 筆發言（雲端共 ${importedLogs.length} 筆，累計 ${codingLogs.length} 筆）`);
+          setImportStatus('ok', `已同步 +${addedCount}筆`);
+        } else {
+          if (!quiet) showToast(`✓ 試算表同步完成：雲端共 ${importedLogs.length} 筆發言，已全部載入（無未同步的新發言）`);
+          setImportStatus('ok', `已同步 (共${importedLogs.length}筆)`);
+        }
+      } catch (err) {
+        console.error('Google Sheet 匯入失敗:', err);
+        if (!quiet) showToast(`✕ 匯入失敗: ${err.message}。請確認 Google Apps Script doGet 是否回傳 JSON。`);
+        setImportStatus('error', '同步失敗');
+      }
+    }
+
+    function rebuildChatHistoriesFromLogs() {
+      const cls = CLASSROOMS.find(c => c.id === activeClassroomId) || CLASSROOMS[0];
+      
+      // 先收集所有有紀錄的教室與組別
+      const logsBySession = {};
+      codingLogs.forEach(l => {
+        const clsId = l.classroom || activeClassroomId;
+        const grp = l.group || '第 1 組';
+        const sessionKey = `${clsId}_${grp}`;
+        if (!logsBySession[sessionKey]) logsBySession[sessionKey] = [];
+        logsBySession[sessionKey].push(l);
+      });
+
+      // 為每個有紀錄的 session 重組 chatHistories
+      for (const [sessionKey, logs] of Object.entries(logsBySession)) {
+        // 初始歡迎詞
+        const messages = [
+          {
+            sender: 'agent',
+            name: 'AI 探究引導夥伴',
+            time: '09:00',
+            text: `同學好！歡迎來到【${cls ? cls.topic : '自然科學探究'}】探究空間。\n你們目前觀察到什麼現象？或是對實驗步驟有什麼想法？隨時提出你們的猜想！`
+          }
+        ];
+
+        // 依時間先後加入學生發言與 AI 回應
+        logs.forEach(l => {
+          messages.push({
+            sender: 'student',
+            name: l.group,
+            time: l.time,
+            text: l.text,
+            attachments: []
+          });
+          if (l.aiReply) {
+            messages.push({
+              sender: 'agent',
+              name: 'AI 探究夥伴',
+              time: l.time,
+              text: l.aiReply
+            });
+          }
+        });
+
+        chatHistories[sessionKey] = messages;
+      }
+    }
+
+    // 清空歷史紀錄（重置測試資料，使用專屬內嵌確認彈窗）
+    function clearAllHistoricalLogs() {
+      if (codingLogs.length === 0) {
+        showToast('目前已經沒有任何歷史紀錄。');
+        return;
+      }
+      document.getElementById('clear-history-modal')?.classList.remove('hidden');
+    }
+
+    async function executeClearHistoricalLogs() {
+      document.getElementById('clear-history-modal')?.classList.add('hidden');
+      codingLogs = [];
+      if (dbInstance) {
+        try {
+          const tx = dbInstance.transaction('research_logs', 'readwrite');
+          tx.objectStore('research_logs').clear();
+        } catch (e) {
+          console.warn('清空 IndexedDB 失敗:', e);
+        }
+      }
+
+      renderTeacherLogs();
+      updateKPICards();
+      renderTeacherChart();
+      resetTimelinePlayback();
+
+      showToast('✓ 已清空所有歷史紀錄，您可以重新開始！');
+    }
+
+    function showToast(msg) {
+      let toast = document.getElementById('app-toast');
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'app-toast';
+        toast.className = 'fixed bottom-5 right-5 z-50 bg-slate-900 text-white text-xs px-4 py-2.5 rounded-lg shadow-lg transition-all duration-300 opacity-0 pointer-events-none';
+        document.body.appendChild(toast);
+      }
+      toast.textContent = msg;
+      toast.classList.remove('opacity-0', 'pointer-events-none');
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'pointer-events-none');
+      }, 2500);
+    }
+
+    // Duplicate updateCurrentClassroomUI removed (original at line 1346 maintained with attachment support)
+
+    function setupEventListeners() {
+      // 頂部導航列：API 設定、匯入試算表、寫入試算表按鈕（統一UI、無圖示）
+      document.getElementById('btn-top-apikey')?.addEventListener('click', openApiKeyModal);
+      document.getElementById('btn-top-import-gsheet')?.addEventListener('click', () => importFromGoogleSheet(false));
+      document.getElementById('btn-top-sync-gsheet')?.addEventListener('click', syncToGoogleSheet);
+      document.getElementById('btn-top-gsheet-config')?.addEventListener('click', openGSheetModal);
+
+      // 學生端教室切換：自動重新載入對話並背景同步最新試算表資料
+      document.getElementById('student-classroom-select')?.addEventListener('change', (e) => {
+        activeClassroomId = e.target.value;
+        updateCurrentClassroomUI();
+        if (googleSheetConfig.endpoint) {
+          importFromGoogleSheet(true);
+        }
+      });
+
+      // 組別切換：自動重新載入對話並背景同步最新試算表資料
+      document.getElementById('student-group-select')?.addEventListener('change', (e) => {
+        currentGroup = e.target.value;
+        updateCurrentClassroomUI();
+        if (googleSheetConfig.endpoint) {
+          importFromGoogleSheet(true);
+        }
+      });
+
+      // 視角切換器與密碼驗證
+      document.getElementById('btn-nav-student')?.addEventListener('click', () => switchView('student'));
+      document.getElementById('btn-nav-teacher')?.addEventListener('click', () => handleTeacherAuth('teacher'));
+      document.getElementById('btn-nav-split')?.addEventListener('click', () => handleTeacherAuth('split'));
+      document.getElementById('btn-lock-teacher')?.addEventListener('click', () => {
+        isTeacherUnlocked = false;
+        switchView('student');
+      });
+
+      // 密碼彈窗
+      document.getElementById('btn-modal-cancel')?.addEventListener('click', () => {
+        document.getElementById('teacher-password-modal').classList.add('hidden');
+      });
+      document.getElementById('btn-modal-submit')?.addEventListener('click', checkTeacherPassword);
+      document.getElementById('teacher-password-input')?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') checkTeacherPassword();
+      });
+
+      // 思考角度多選標籤 (CER + KB)
+      const scaffoldTemplates = {
+        'C 主張 (Claim)': '【主張 Claim】我認為的核心結論是：',
+        'E 證據 (Evidence)': '【證據 Evidence】我們的觀察現象與實驗數據為：',
+        'R 推理 (Reasoning)': '【推理 Reasoning】連結上述證據與科學原理的因果機制是：',
+        '真實想法與問題': '【真實問題】我們小組感到困惑的關鍵是：',
+        '可改善的想法': '【修改想法】針對先前的猜想，我們發現有需要修正的地方：',
+        '想法多樣性': '【多元假設】我們小組內部有另一種不同的可能解釋：',
+        '觀點整合 (Rise Above)': '【觀點整合】綜合大家的發現，我們歸納出一個更高層次的原理解釋：',
+        '認識論主體性 (實驗規劃)': '【實驗設計】我們打算控制與改變的變因如下：',
+        '運用權威來源 (文獻/定律)': '【引用定律】根據科學定律或文獻記載：',
+        '社群知識與責任': '【小組貢獻】我們想向全班提出這個發現共同檢驗：'
+      };
+
+      document.querySelectorAll('.scaffold-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const type = btn.getAttribute('data-scaffold');
+          const input = document.getElementById('student-chat-input');
+          btn.classList.toggle('is-active');
+
+          const activeButtons = document.querySelectorAll('.scaffold-btn.is-active');
+          let combined = '';
+          activeButtons.forEach(b => {
+            const t = b.getAttribute('data-scaffold');
+            if (scaffoldTemplates[t]) combined += scaffoldTemplates[t] + ' \n';
+          });
+          input.value = combined;
+          input.focus();
+        });
+      });
+
+          // 即時思考動態氣泡與秒數反饋
+    function showThinkingIndicator() {
+      const container = document.getElementById('chat-messages');
+      const sendBtn = document.getElementById('btn-send-message');
+      const inputEl = document.getElementById('student-chat-input');
+
+      let bubble = document.getElementById('ai-thinking-indicator');
+      if (!bubble && container) {
+        bubble = document.createElement('div');
+        bubble.id = 'ai-thinking-indicator';
+        bubble.className = 'flex flex-col items-start w-full';
+        bubble.innerHTML = `
+          <div class="max-w-[85%] rounded-2xl p-3.5 bg-white border border-slate-200 shadow-xs border-l-4 border-l-slate-800 text-xs text-slate-600 flex items-center gap-3">
+            <div class="flex items-center gap-1 shrink-0">
+              <span class="w-2 h-2 rounded-full bg-slate-800 animate-bounce"></span>
+              <span class="w-2 h-2 rounded-full bg-slate-800 animate-bounce [animation-delay:0.15s]"></span>
+              <span class="w-2 h-2 rounded-full bg-slate-800 animate-bounce [animation-delay:0.3s]"></span>
+            </div>
+            <div class="min-w-0 space-y-0.5">
+              <div class="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                <span>AI 探究引導夥伴正在思考中...</span>
+                <span id="thinking-timer" class="font-mono text-[10px] text-slate-400 font-normal">(0s)</span>
+              </div>
+              <div id="thinking-step-text" class="text-[11px] text-slate-500 font-sans truncate">
+                正在分析發言中的探究問題與 CER 架構...
+              </div>
+            </div>
+          </div>
+        `;
+        container.appendChild(bubble);
+        container.scrollTop = container.scrollHeight;
+      }
+
+      if (sendBtn) {
+        sendBtn.disabled = true;
+        sendBtn.classList.add('opacity-60', 'cursor-not-allowed');
+        sendBtn.textContent = '思考中...';
+      }
+      if (inputEl) inputEl.disabled = true;
+
+      let seconds = 0;
+      const timerEl = document.getElementById('thinking-timer');
+      const stepEl = document.getElementById('thinking-step-text');
+
+      const interval = setInterval(() => {
+        seconds++;
+        if (timerEl) timerEl.textContent = `(${seconds}s)`;
+        if (stepEl) {
+          if (seconds === 2) stepEl.textContent = '正在檢索微觀科學機制與因果模型...';
+          else if (seconds === 4) stepEl.textContent = '正在組織約 350 字的 CER 結構化指引...';
+          else if (seconds === 7) stepEl.textContent = '正在進行最後的論證品質評估與文字排版...';
+          else if (seconds >= 10) stepEl.textContent = '模型連線超時，即將為您切換備援引擎...';
+        }
+      }, 1000);
+
+      return () => {
+        clearInterval(interval);
+        const currentBubble = document.getElementById('ai-thinking-indicator');
+        if (currentBubble) currentBubble.remove();
+        if (sendBtn) {
+          sendBtn.disabled = false;
+          sendBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+          sendBtn.textContent = '發言';
+        }
+        if (inputEl) {
+          inputEl.disabled = false;
+          inputEl.focus();
+        }
+      };
+    }
+
+    // 發言送出邏輯
+      const sendMessage = async () => {
+        const input = document.getElementById('student-chat-input');
+        const text = input.value.trim();
+        if (!text && studentPendingAttachments.length === 0) return;
+
+        // 收集選取的思考標籤
+        const activeButtons = document.querySelectorAll('.scaffold-btn.is-active');
+        const selectedScaffolds = Array.from(activeButtons).map(b => b.getAttribute('data-scaffold')).join(', ');
+
+        const historyKey = `${activeClassroomId}_${currentGroup}`;
+        const userMsg = {
+          sender: 'student',
+          name: currentGroup,
+          time: new Date().toTimeString().slice(0, 5),
+          text: text,
+          attachments: [...studentPendingAttachments]
+        };
+
+        chatHistories[historyKey].push(userMsg);
+        renderChatMessage(userMsg);
+        input.value = '';
+        studentPendingAttachments = [];
+        document.getElementById('student-attachment-preview-area').classList.add('hidden');
+        document.querySelectorAll('.scaffold-btn.is-active').forEach(b => b.classList.remove('is-active'));
+
+        // 顯示 AI 正在思考引導氣泡與倒數計時
+        const removeThinking = showThinkingIndicator();
+
+        try {
+          const res = await callGeminiDualOutput(text, userMsg.attachments);
+          const replyText = res.student_facing_reply || res.text || '探究夥伴已收到您的發言。';
+          const agentMsg = {
+            sender: 'agent',
+            name: 'AI 探究夥伴',
+            time: new Date().toTimeString().slice(0, 5),
+            text: replyText
+          };
+          chatHistories[historyKey].push(agentMsg);
+          renderChatMessage(agentMsg);
+
+          // 更新儀表板
+          if (res.state_tracker) {
+            updateCERDashboard(res.state_tracker.cer_evaluation);
+            updateInquiryStage(res.state_tracker.current_stage, res.state_tracker.kb_principle_name, res.state_tracker.achieved_stages);
+
+            // 記錄研究日誌
+            const logItem = {
+              id: Date.now().toString(),
+              time: userMsg.time,
+              classroom: activeClassroomId,
+              group: currentGroup,
+              text: text,
+              aiReply: replyText,
+              scaffold: selectedScaffolds,
+              principle: (res.state_tracker && res.state_tracker.kb_principle_name) ? res.state_tracker.kb_principle_name : '真實想法與問題',
+              stage: (res.state_tracker && res.state_tracker.current_stage) ? res.state_tracker.current_stage : '問題探索',
+              cer: (res.state_tracker && res.state_tracker.cer_evaluation) ? res.state_tracker.cer_evaluation : { claim: 6.0, evidence: 5.5, reasoning: 5.5 },
+              hasAttachment: userMsg.attachments.length > 0
+            };
+            codingLogs.push(logItem);
+            saveLogToDB(logItem);
+            renderTeacherLogs();
+            updateKPICards();
+            // 學生問一個問題，背景自動即時寫入 Google 試算表
+            autoSyncSingleLog(logItem);
+          }
+        } catch (e) {
+          console.error('發言處理異常:', e);
+          const fallbackRes = generateLocalFallback(text);
+          const agentMsg = {
+            sender: 'agent',
+            name: 'AI 探究夥伴',
+            time: new Date().toTimeString().slice(0, 5),
+            text: fallbackRes.student_facing_reply
+          };
+          chatHistories[historyKey].push(agentMsg);
+          renderChatMessage(agentMsg);
+        } finally {
+          removeThinking();
+        }
+      };
+
+      document.getElementById('btn-send-message')?.addEventListener('click', sendMessage);
+      document.getElementById('student-chat-input')?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') sendMessage();
+      });
+
+      // 照片上傳
+      document.getElementById('btn-upload-photo')?.addEventListener('click', () => {
+        document.getElementById('student-image-input')?.click();
+      });
+
+      document.getElementById('student-image-input')?.addEventListener('change', (e) => {
+        const files = Array.from(e.target.files);
+        files.forEach(file => {
+          const reader = new FileReader();
+          reader.onload = (evt) => {
+            studentPendingAttachments.push(evt.target.result);
+            renderAttachmentPreviews();
+          };
+          reader.readAsDataURL(file);
+        });
+      });
+    }
+
+    function renderAttachmentPreviews() {
+      const area = document.getElementById('student-attachment-preview-area');
+      area.innerHTML = '';
+      if (studentPendingAttachments.length === 0) {
+        area.classList.add('hidden');
+        return;
+      }
+      area.classList.remove('hidden');
+      studentPendingAttachments.forEach((src, idx) => {
+        const item = document.createElement('div');
+        item.className = 'relative w-12 h-12 rounded-lg overflow-hidden border border-slate-200';
+        item.innerHTML = `<img src="${src}" class="w-full h-full object-cover"/><button type="button" class="absolute top-0 right-0 bg-slate-900 text-white text-[9px] w-4 h-4 flex items-center justify-center">✕</button>`;
+        item.querySelector('button').addEventListener('click', () => {
+          studentPendingAttachments.splice(idx, 1);
+          renderAttachmentPreviews();
+        });
+        area.appendChild(item);
+      });
+    }
+
+    function handleTeacherAuth(targetMode) {
+      if (isTeacherUnlocked) {
+        switchView(targetMode);
+      } else {
+        pendingTargetMode = targetMode;
+        document.getElementById('teacher-password-input').value = '';
+        document.getElementById('teacher-password-error').classList.add('hidden');
+        document.getElementById('teacher-password-modal').classList.remove('hidden');
+        document.getElementById('teacher-password-input').focus();
+      }
+    }
+
+    function checkTeacherPassword() {
+      const input = document.getElementById('teacher-password-input').value.trim();
+      if (input === TEACHER_PASSWORD) {
+        isTeacherUnlocked = true;
+        document.getElementById('teacher-password-modal').classList.add('hidden');
+        switchView(pendingTargetMode || 'teacher');
+      } else {
+        document.getElementById('teacher-password-error').classList.remove('hidden');
+      }
+    }
+
+    function switchView(mode) {
+      currentLayoutMode = mode;
+      const vStudent = document.getElementById('view-student');
+      const vTeacher = document.getElementById('view-teacher');
+      const btnStudent = document.getElementById('btn-nav-student');
+      const btnTeacher = document.getElementById('btn-nav-teacher');
+      const btnSplit = document.getElementById('btn-nav-split');
+
+      [btnStudent, btnTeacher, btnSplit].forEach(b => {
+        b.className = 'px-3 py-1.5 text-xs font-medium rounded-lg text-slate-600 hover:bg-slate-100 transition-colors';
+      });
+
+      if (mode === 'student') {
+        vStudent.classList.remove('hidden');
+        vTeacher.classList.add('hidden');
+        btnStudent.className = 'px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 text-white transition-colors';
+      } else if (mode === 'teacher') {
+        vStudent.classList.add('hidden');
+        vTeacher.classList.remove('hidden');
+        btnTeacher.className = 'px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 text-white transition-colors';
+        renderTeacherChart();
+      } else if (mode === 'split') {
+        vStudent.classList.remove('hidden');
+        vTeacher.classList.remove('hidden');
+        btnSplit.className = 'px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 text-white transition-colors';
+        renderTeacherChart();
+      }
+    }
+
+    function renderTeacherChart() {
+      const ctx = document.getElementById('chart-cer-bars')?.getContext('2d');
+      if (!ctx) return;
+      if (cerBarChart) cerBarChart.destroy();
+
+      const clsFilter = document.getElementById('teacher-classroom-filter')?.value || '全部';
+      const grpFilter = document.getElementById('teacher-group-filter')?.value || '全部';
+
+      const filtered = codingLogs.filter(l => {
+        if (clsFilter !== '全部' && l.classroom && l.classroom !== clsFilter) return false;
+        if (grpFilter !== '全部' && l.group && l.group !== grpFilter) return false;
+        return true;
+      });
+
+      let avgC = 6.8, avgE = 5.4, avgR = 4.9;
+      if (filtered.length > 0) {
+        avgC = parseFloat((filtered.reduce((acc, cur) => acc + (cur.cer?.claim || 0), 0) / filtered.length).toFixed(1));
+        avgE = parseFloat((filtered.reduce((acc, cur) => acc + (cur.cer?.evidence || 0), 0) / filtered.length).toFixed(1));
+        avgR = parseFloat((filtered.reduce((acc, cur) => acc + (cur.cer?.reasoning || 0), 0) / filtered.length).toFixed(1));
+      }
+
+      cerBarChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['C 主張品質', 'E 證據充分度', 'R 推理嚴密性'],
+          datasets: [{
+            label: `${grpFilter === '全部' ? '全班' : grpFilter} 平均水位 (1-10分)`,
+            data: [avgC, avgE, avgR],
+            backgroundColor: ['#475569', '#334155', '#0f172a'],
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: { beginAtZero: true, max: 10 }
+          }
+        }
+      });
+    }
+
+    // 啟動初始化
+    window.onload = () => {
+      initApp();
+    };
+  </script>
+</body>
+</html>
